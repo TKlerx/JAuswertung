@@ -30,6 +30,12 @@ These are acceptance runs for the planned Android app and the existing JAuswertu
 .\gradlew.bat :app:installDebug
 ```
 
+### Android pairing check (T009–T011, 2026-11-23)
+
+The Android 17 emulator paired over HTTPS against the verified Windows pilot. Before arming it showed standby. After arming it showed lane 3 for phone timing and lane 4 for manual entry, with lane 5 assigned to the other device and absent from the Android screen. After an app process restart, the original pairing restored the lane view. The app returned to the pairing screen with an expiry message after the desk invalidated the credential.
+
+The emulator used `10.0.2.2` and a disposable pilot CA provisioned only for that host in a local debug build. The untrusted connection was rejected in a separate negative check. Instrumentation invoked the app's pairing action and verified the rendered screen. The regular Android source passed the five JVM tests, the debug APK build and Android Lint.
+
 ## Complete heat and delivery recovery
 
 1. Assign two timestamp lanes and one stopwatch lane to the same Android device. Pair with a single-use code and verify only those lanes appear with the correct modes. On target API 37, also deny and then grant local network access. Confirm that the UI explains the denial and recovers when granted.

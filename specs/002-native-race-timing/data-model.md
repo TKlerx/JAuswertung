@@ -7,7 +7,7 @@
 
 ## Active heat and lanes
 
-- **Fields** — attempt UUID, display heat number, discipline, state, desk readiness, sync requirement, and assigned lane records with lane number, participant label and capture mode.
+- **Fields** — attempt UUID, desk heat UUID, discipline, state, desk readiness, sync requirement, and assigned lane records with lane number, participant label and capture mode. The app shows a short form of the heat UUID as the heat identifier.
 - **Rules** — the app keeps the last observed heat in memory. The attempt UUID identifies the heat for submissions. Lane numbers are unique within an attempt. Show a disconnected indicator when using the last observed attempt. Enable new entries after observing `LAEUFT` for the current attempt. Under outage, use that snapshot while locally eligible. After app recreation, load the current heat from the desk before enabling new entries. Persisted submissions can be retried independently of the current heat.
 
 ## Clock estimate
