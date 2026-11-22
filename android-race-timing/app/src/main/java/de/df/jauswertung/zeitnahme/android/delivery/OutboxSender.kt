@@ -47,7 +47,6 @@ class OutboxSender(
                 store.recordSend(event.id, DeliveryStatus.PENDING, "desk_unreachable")
                 break
             }
-            val body = response.json()
             when {
                 response.status == 401 -> {
                     pairings.expire(event.pairingGeneration)
@@ -55,10 +54,10 @@ class OutboxSender(
                     store.blockPairing(event.pairingGeneration, "desk_session_expired")
                     break
                 }
-                response.status == 200 && body?.opt("angenommen") == true ->
+                response.acknowledged() ->
                     store.recordSend(event.id, DeliveryStatus.ACCEPTED, null)
                 response.status in 400..499 && response.status !in setOf(408, 429) ->
-                    store.recordSend(event.id, DeliveryStatus.REJECTED, body?.optString("fehler")
+                    store.recordSend(event.id, DeliveryStatus.REJECTED, response.json()?.optString("fehler")
                         ?.takeIf(String::isNotBlank) ?: "request_rejected")
                 else -> {
                     store.recordSend(event.id, DeliveryStatus.PENDING, "desk_response_unconfirmed")
@@ -67,24 +66,26 @@ class OutboxSender(
             }
         }
     }
+}
 
-    private fun OutboxEvent.payload(): JSONObject {
-        val payload = JSONObject()
-            .put("versuch", attemptId.toString())
-            .put("ereignis", id.toString())
-            .put("bahn", lane)
-        return when (kind) {
-            EventKind.FINISH -> payload
-                .put("zeit", timeMicros)
-                .put("epoche", requireNotNull(clockEpoch).toString())
-                .put("schaetzung", requireNotNull(estimateId).toString())
-            EventKind.STOPWATCH -> payload.put("dauer", timeMicros)
-        }
+internal fun OutboxEvent.payload(): JSONObject {
+    val payload = JSONObject()
+        .put("versuch", attemptId.toString())
+        .put("ereignis", id.toString())
+        .put("bahn", lane)
+    return when (kind) {
+        EventKind.FINISH -> payload
+            .put("zeit", timeMicros)
+            .put("epoche", requireNotNull(clockEpoch).toString())
+            .put("schaetzung", requireNotNull(estimateId).toString())
+        EventKind.STOPWATCH -> payload.put("dauer", timeMicros)
     }
+}
 
-    private fun DeskResponse.json(): JSONObject? = try {
-        JSONObject(body)
-    } catch (_: JSONException) {
-        null
-    }
+internal fun DeskResponse.acknowledged(): Boolean = status == 200 && json()?.opt("angenommen") == true
+
+private fun DeskResponse.json(): JSONObject? = try {
+    JSONObject(body)
+} catch (_: JSONException) {
+    null
 }

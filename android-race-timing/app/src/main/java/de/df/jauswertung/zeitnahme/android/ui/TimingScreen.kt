@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,12 +36,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.df.jauswertung.zeitnahme.android.R
-import de.df.jauswertung.zeitnahme.android.net.DeskHeat
 import de.df.jauswertung.zeitnahme.android.net.DeskProblem
-import de.df.jauswertung.zeitnahme.android.net.HeatState
+import java.util.UUID
 
 @Composable
-fun TimingScreen(state: TimingScreenState, onPair: (String, String, String) -> Unit, requestNetwork: () -> Unit) {
+fun TimingScreen(
+    state: TimingScreenState,
+    onPair: (String, String, String) -> Unit,
+    requestNetwork: () -> Unit,
+    onFinish: (UUID, Int) -> Unit,
+) {
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
     val colors = when {
@@ -69,7 +72,7 @@ fun TimingScreen(state: TimingScreenState, onPair: (String, String, String) -> U
                     when {
                         state.loading -> CircularProgressIndicator()
                         state.pairedName == null -> PairForm(state.networkAllowed && !state.pairing, onPair)
-                        else -> HeatContent(state.pairedName, state.heat)
+                        else -> LaneScreen(state.pairedName, state, onFinish)
                     }
                 }
             }
@@ -99,39 +102,6 @@ private fun PairForm(enabled: Boolean, onPair: (String, String, String) -> Unit)
         onClick = { onPair(address, name, code) },
         enabled = enabled && address.isNotBlank() && name.isNotBlank() && code.isNotBlank(),
     ) { Text(stringResource(R.string.pair)) }
-}
-
-@Composable
-private fun HeatContent(name: String, heat: DeskHeat?) {
-    Text(stringResource(R.string.paired_as, name), style = MaterialTheme.typography.titleMedium)
-    if (heat == null) {
-        Text(stringResource(R.string.waiting_for_heat))
-        return
-    }
-    Text(heat.discipline, style = MaterialTheme.typography.headlineSmall)
-    Text(stringResource(R.string.heat_id, heat.id.toString().take(8)))
-    Text(stringResource(heat.statusText()), style = MaterialTheme.typography.titleMedium)
-    if (heat.lanes.isEmpty()) Text(stringResource(R.string.no_lanes))
-    for (lane in heat.lanes) {
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.lane_number, lane.number), style = MaterialTheme.typography.titleLarge)
-                Text(lane.participant, style = MaterialTheme.typography.bodyLarge)
-                Text(stringResource(if (lane.phoneTiming) R.string.timed_lane else R.string.stopwatch_lane))
-            }
-        }
-    }
-}
-
-private fun DeskHeat.statusText(): Int = when (state) {
-    HeatState.BEREIT -> if (ready) R.string.heat_ready
-        else if (syncRequired) R.string.waiting_for_sync else R.string.heat_armed
-    HeatState.TISCHSTART -> R.string.desk_start
-    HeatState.FREIGEGEBEN -> R.string.start_pending
-    HeatState.START_UNSICHER -> R.string.start_uncertain
-    HeatState.LAEUFT -> R.string.heat_running
-    HeatState.GESCHLOSSEN -> R.string.heat_closed
-    HeatState.UEBERNOMMEN -> R.string.heat_applied
 }
 
 private fun DeskProblem.text(): Int = when (this) {

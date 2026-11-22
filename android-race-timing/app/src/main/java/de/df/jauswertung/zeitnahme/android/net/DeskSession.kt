@@ -47,7 +47,8 @@ class DeskSession internal constructor(
     private val expirePairing: suspend (UUID) -> Unit,
 ) {
     constructor(http: DeskHttp, store: PairingStore) :
-        this(http::post, store::current, store::saveSuccessful, store::expire)
+        this({ origin, endpoint, json, pairing -> http.post(origin, endpoint, json, pairing) },
+            store::current, store::saveSuccessful, store::expire)
 
     private val mutex = Mutex()
     private var active: DeskPairing? = null

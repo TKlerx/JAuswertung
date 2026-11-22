@@ -36,6 +36,12 @@ The Android 17 emulator paired over HTTPS against the verified Windows pilot. Be
 
 The emulator used `10.0.2.2` and a disposable pilot CA provisioned only for that host in a local debug build. The untrusted connection was rejected in a separate negative check. Instrumentation invoked the app's pairing action and verified the rendered screen. The regular Android source passed the five JVM tests, the debug APK build and Android Lint.
 
+### Desk countdown and Android finish check (T012–T016, 2026-11-23)
+
+The verified Windows pilot armed a synthetic heat and reached Ready after Android clock sampling over trusted loopback HTTPS. The emulator showed two assigned timed lanes (3 and 4). Both finish controls were disabled before the start and tapping them during the three short tones produced no capture. After the long tone, lane 3 could be captured and then became disabled while lane 4 stayed available. A repeated tap on lane 3 produced no extra result. The desk confirmed one timed finish per lane, 4,874,702 µs for lane 3 and 9,981,497 µs for lane 4, both classified as certain by the plugin. These are elapsed times for emulator taps. The independent timing reference and audible onset measurement are part of T025.
+
+The seven JVM tests, the debug APK build and Android Lint passed. The clock contract tests covered five-second probe expiry, estimate scope mismatches and the inclusive 10,000 µs bound. Local emulator evidence is in `target/desktop-t008/android-finish-results.csv`.
+
 ## Complete heat and delivery recovery
 
 1. Assign two timestamp lanes and one stopwatch lane to the same Android device. Pair with a single-use code and verify only those lanes appear with the correct modes. On target API 37, also deny and then grant local network access. Confirm that the UI explains the denial and recovers when granted.

@@ -31,4 +31,11 @@
     <string name="lane_number">Bahn %1$d</string>
     <string name="timed_lane">Zielzeit per Handy</string>
     <string name="stopwatch_lane">Manuelle Stoppuhrzeit</string>
+    <string name="capture_finish">Ziel erfassen · Bahn %1$d</string>
+    <string name="capture_clock_unavailable">Zielerfassung pausiert. Der Uhrabgleich fehlt oder ist abgelaufen.</string>
+    <string name="capture_storage_failure">Speichern oder Senden der Zielzeit fehlgeschlagen. Prüfe den Status der Bahn.</string>
+    <string name="finish_pending">Gespeichert · wartet auf Bestätigung</string>
+    <string name="finish_accepted">Am Wettkampftisch eingegangen</string>
+    <string name="finish_rejected">Vom Wettkampftisch abgelehnt</string>
+    <string name="finish_blocked">Senden gesperrt · Kopplung abgelaufen</string>
 </resources>
