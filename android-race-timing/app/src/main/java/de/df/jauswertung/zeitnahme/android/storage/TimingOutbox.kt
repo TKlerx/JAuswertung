@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
@@ -49,13 +50,13 @@ data class OutboxEvent(
 
 @Dao
 abstract class TimingOutbox {
-    @Insert
-    protected abstract suspend fun insert(event: OutboxEvent)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insert(event: OutboxEvent): Long
 
     @Transaction
-    open suspend fun enqueue(event: OutboxEvent) {
+    open suspend fun enqueue(event: OutboxEvent): Boolean {
         require(event.status == DeliveryStatus.PENDING && event.sendAttempts == 0 && event.reason == null)
-        insert(event)
+        return insert(event) != -1L
     }
 
     @Query("SELECT * FROM outbox ORDER BY rowid")

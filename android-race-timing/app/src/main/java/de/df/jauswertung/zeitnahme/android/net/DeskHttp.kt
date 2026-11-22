@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import de.df.jauswertung.zeitnahme.android.clock.monotonicMicros
 import de.df.jauswertung.zeitnahme.android.storage.DeskPairing
 import java.net.URI
 import javax.net.ssl.HttpsURLConnection
@@ -32,6 +33,8 @@ class DeskHttp(context: Context) {
         endpoint: DeskEndpoint,
         request: JSONObject,
         pairing: DeskPairing? = null,
+        onSent: ((Long) -> Unit)? = null,
+        onReceived: ((Long) -> Unit)? = null,
     ): DeskResponse = withContext(Dispatchers.IO) {
         require(
             if (endpoint == DeskEndpoint.PAIR) pairing == null
@@ -51,8 +54,13 @@ class DeskHttp(context: Context) {
             pairing?.let { connection.setRequestProperty("Authorization", "Bearer ${it.bearer}") }
             val bytes = request.toString().toByteArray(Charsets.UTF_8)
             connection.setFixedLengthStreamingMode(bytes.size)
+            if (onSent != null) {
+                connection.connect()
+                onSent(monotonicMicros())
+            }
             connection.outputStream.use { it.write(bytes) }
             val status = connection.responseCode
+            onReceived?.invoke(monotonicMicros())
             val input = if (status >= 400) connection.errorStream else connection.inputStream
             DeskResponse(status, input?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty())
         } finally {
@@ -65,6 +73,8 @@ class DeskHttp(context: Context) {
         val active = connectivity.activeNetwork
         return active?.takeIf(::isWifi) ?: connectivity.allNetworks.firstOrNull(::isWifi)
     }
+
+    internal fun networkPath(): Network? = localWifi() ?: connectivity.activeNetwork
 
     private fun isWifi(network: Network): Boolean =
         connectivity.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
