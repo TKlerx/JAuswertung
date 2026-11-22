@@ -1,3 +1,34 @@
 <resources>
     <string name="app_name">JAuswertung Zeitnahme</string>
+    <string name="desk_address">HTTPS-Adresse des Wettkampftischs</string>
+    <string name="device_name">Gerätename</string>
+    <string name="pairing_code">Kopplungscode</string>
+    <string name="pair">Koppeln</string>
+    <string name="paired_as">Gekoppelt als %1$s</string>
+    <string name="local_network_explanation">Für den Wettkampftisch ist Zugriff auf das lokale Netzwerk nötig. Erlaube den Zugriff hier oder in den Android-Einstellungen.</string>
+    <string name="allow_local_network">Netzwerkzugriff erlauben</string>
+    <string name="invalid_address">Gib die HTTPS-Adresse des Wettkampftischs ohne Pfad ein.</string>
+    <string name="invalid_pair_input">Prüfe den Gerätenamen und den Kopplungscode.</string>
+    <string name="invalid_code">Der Kopplungscode ist ungültig, abgelaufen oder wurde schon verwendet.</string>
+    <string name="pair_unconfirmed">Die Kopplung wurde nicht bestätigt. Prüfe den Kopplungsstatus am Tisch, bevor du einen neuen Code verwendest.</string>
+    <string name="pair_expired">Die Kopplung ist abgelaufen. Hole einen neuen Code am Wettkampftisch.</string>
+    <string name="tls_failure">Die HTTPS-Verbindung ist nicht vertrauenswürdig. Prüfe Adresse und Zertifikat am Wettkampftisch.</string>
+    <string name="desk_unreachable">Die Verbindung zum Wettkampftisch ist unterbrochen.</string>
+    <string name="invalid_response">Die Antwort des Wettkampftischs konnte nicht gelesen werden.</string>
+    <string name="pair_storage_failure">Die gespeicherte Kopplung konnte nicht geladen werden.</string>
+    <string name="waiting_for_heat">Wartet auf einen Lauf am Wettkampftisch</string>
+    <string name="heat_id">Laufkennung %1$s</string>
+    <string name="waiting_for_sync">Scharfgeschaltet · wartet auf Uhrabgleich</string>
+    <string name="heat_armed">Lauf scharfgeschaltet</string>
+    <string name="heat_ready">Startbereit</string>
+    <string name="desk_start">Start am Wettkampftisch</string>
+    <string name="start_pending">Wartet auf Startmeldung</string>
+    <string name="start_uncertain">Start noch nicht bestätigt</string>
+    <string name="heat_running">Lauf läuft</string>
+    <string name="heat_closed">Lauf geschlossen</string>
+    <string name="heat_applied">Ergebnisse übernommen</string>
+    <string name="no_lanes">Diesem Gerät sind keine Bahnen zugewiesen.</string>
+    <string name="lane_number">Bahn %1$d</string>
+    <string name="timed_lane">Zielzeit per Handy</string>
+    <string name="stopwatch_lane">Manuelle Stoppuhrzeit</string>
 </resources>
