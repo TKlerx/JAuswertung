@@ -5,7 +5,7 @@ This is the Android subset of the existing [Spec 001 device contract](../../001-
 | Path | Request | Response and Android use |
 |---|---|---|
 | `/api/paaren` | `code`, `name` | `zugang` is the session bearer credential. Pairing codes are single-use. After an ambiguous timeout, surface the pairing problem. If the role is already bound, use a free role after operator reassignment or restart the desk listener when safe. |
-| `/api/lauf` | Empty object | Standby if `versuch` is absent. Otherwise read `versuch`, display `lauf`, `disziplin`, `zustand`, `bereit`, `abgleich`, and assigned `bahnen`. Lane fields are `nummer`, `teilnehmer` and `telefonzeit`. |
+| `/api/lauf` | Empty object | Standby if `versuch` is absent. Otherwise read attempt UUID `versuch`, heat UUID `lauf`, `disziplin`, `zustand`, `bereit`, `abgleich`, and assigned `bahnen`. Lane fields are `nummer`, `teilnehmer` and `telefonzeit`. |
 | `/api/uhr` | `versuch`, `epoche` | `probe`, `schreibtischEpoche`, `schreibtischEmpfangen`, `schreibtischGesendet`. Record the handset's send and receive timestamps on the same monotonic clock. |
 | `/api/probe` | `probe`, `epoche`, `telefonGesendet`, `telefonEmpfangen` | Estimate fields `id`, `versatz`, `unsicherheit`, `bezugszeit`, `driftPpm`, `auffrischungMs`. An active attempt and eligible timed lane are required. Probes are single-use and expire after five seconds. |
 | `/api/ziel` | `versuch`, `ereignis`, `bahn`, `zeit`, `epoche`, `schaetzung` | `angenommen: true` acknowledges that finish for desk review. Send only for a timestamp lane. |
