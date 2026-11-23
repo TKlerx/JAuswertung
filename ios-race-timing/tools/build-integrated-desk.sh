@@ -60,4 +60,8 @@ PY
 "${maven[@]}" -f "$desk/pom.xml" -pl jauswertung -am package dependency:build-classpath \
     -DincludeScope=runtime "-Dmdep.outputFile=$work/classpath.txt"
 classpath="$desk/jauswertung/target/classes:$(cat "$work/classpath.txt")"
-javac -encoding UTF-8 -cp "$classpath" -d "$work" "$repo/ios-race-timing/tools/IntegratedMixedPilot.java"
+javac -encoding UTF-8 -cp "$classpath" -d "$work" \
+    "$repo/ios-race-timing/tools/IntegratedMixedPilot.java" "$repo/ios-race-timing/tools/PilotAudio.java"
+mkdir -p "$work/META-INF/services"
+printf '%s\n' de.df.jauswertung.gui.plugins.zeitnahme.PilotAudio \
+    > "$work/META-INF/services/javax.sound.sampled.spi.MixerProvider"

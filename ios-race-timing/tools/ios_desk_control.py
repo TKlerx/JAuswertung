@@ -69,6 +69,7 @@ def run():
         desktop = subprocess.Popen([
             str(Path(os.environ["PILOT_JAVA_HOME"])/"bin/java"), "-Xmx256m",
             "--add-exports", "java.desktop/sun.awt=ALL-UNNAMED",
+            "-Djavax.sound.sampled.Clip=de.df.jauswertung.gui.plugins.zeitnahme.PilotAudio",
             "-Dlogback.configurationFile=logback.xml", f"-Duser.home={work}",
             f"-Djava.util.prefs.PreferencesFactory={main}$IsolatedPreferences", "-cp", classpath, main,
             str(work/"synthetic.wk"), str(work/"desktop.p12"), "unused", str(port),
