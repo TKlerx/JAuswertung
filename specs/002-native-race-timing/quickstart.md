@@ -56,6 +56,16 @@ In the second process, the app restored the pending event and resent the identic
 
 The three local Android instrumentation checks passed for transaction rollback, durable replay and 401 blocking. Both live restart phases, all nine JVM tests, debug app and test APK builds, and Android Lint passed. Local evidence is in `target/desktop-t008/android-outbox-evidence/`. The complete mixed-mode run with an actual connectivity interruption is part of T024.
 
+### Integrated Android heat with a network outage (T024, 2026-11-23)
+
+The verified Windows pilot opened a disposable competition in JAuswertung and started HTTPS from **Information → Zeitnahme**. An Android 10 emulator paired with the debug APK using a disposable pilot CA. Android instrumentation invoked the app's capture actions with the regular HTTPS client and Room outbox. The clock readiness limit stayed at 10 ms. The countdown was active before the attempt had a start timestamp, and the app blocked capture until it observed the running heat.
+
+The desk accepted a timed finish on lane 3 while connected. During a simulated interruption of the connection to the desk, Android stored a timed finish on lane 5 and a stopwatch time of `1:05,20` on lane 4. Both records were pending and the desk still had only lane 3. After reconnecting, Android automatically delivered the original event IDs, timestamps and clock estimates. The JAuswertung review had exactly one result for each of lanes 3, 4 and 5.
+
+**Zeiten übernehmen** wrote 54, 6,520 and 102 centiseconds to lanes 3, 4 and 5 respectively in the live competition. The corresponding values were zero before Apply. Lane 6 held its preexisting 7,890 centiseconds before and after. The instrumentation passed. Local evidence is in `target/integrated-timing-validation/mixed-38sue9kl/`. The T020 lost-acknowledgement and process restart run above used the same desktop pilot.
+
+The standard Java 25 `mvn -o verify` run still stopped at the unresolved `filechooser-platform` snapshot. The live test used the previously verified Windows build with the local FileChooser workaround.
+
 ## Complete heat and delivery recovery
 
 1. Assign two timestamp lanes and one stopwatch lane to the same Android device. Pair with a single-use code and verify only those lanes appear with the correct modes. On target API 37, also deny and then grant local network access. Confirm that the UI explains the denial and recovers when granted.
