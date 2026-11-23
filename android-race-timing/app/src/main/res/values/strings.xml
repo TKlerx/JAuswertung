@@ -31,6 +31,10 @@
     <string name="lane_number">Bahn %1$d</string>
     <string name="timed_lane">Zielzeit per Handy</string>
     <string name="stopwatch_lane">Manuelle Stoppuhrzeit</string>
+    <string name="stopwatch_input">Stoppuhrzeit für Bahn %1$d</string>
+    <string name="stopwatch_input_format">Zum Beispiel 1:05,20 oder 65,20</string>
+    <string name="stopwatch_input_error">Gib eine gültige Zeit größer als null ein, z. B. 1:05,20.</string>
+    <string name="stopwatch_save">Zeit melden · Bahn %1$d</string>
     <string name="capture_finish">Ziel erfassen · Bahn %1$d</string>
     <string name="capture_clock_unavailable">Zielerfassung pausiert. Der Uhrabgleich fehlt oder ist abgelaufen.</string>
     <string name="capture_storage_failure">Speichern oder Senden der Zielzeit fehlgeschlagen. Prüfe den Status der Bahn.</string>

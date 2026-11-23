@@ -5,6 +5,7 @@ import android.database.SQLException
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.df.jauswertung.zeitnahme.android.capture.FinishCapture
+import de.df.jauswertung.zeitnahme.android.capture.StopwatchCapture
 import de.df.jauswertung.zeitnahme.android.clock.ACQUISITION_MS
 import de.df.jauswertung.zeitnahme.android.clock.ClockEstimate
 import de.df.jauswertung.zeitnahme.android.clock.ClockScope
@@ -54,6 +55,7 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
     private val session = DeskSession(http, pairings)
     private val outbox = TimingDatabase.open(application).outbox()
     private val finish = FinishCapture(outbox::enqueue)
+    private val stopwatch = StopwatchCapture(outbox::enqueue)
     private val sender = OutboxSender(outbox, pairings, http)
     private val mutable = MutableStateFlow(TimingScreenState())
     val state = mutable.asStateFlow()
@@ -127,15 +129,29 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
     fun captureFinish(attempt: UUID, lane: Int) {
         val capturedAt = monotonicMicros()
         val credentials = pairing ?: return
-        val current = mutable.value
-        val heat = current.heat?.takeIf { it.attempt == attempt } ?: return
+        val heat = mutable.value.heat?.takeIf { it.attempt == attempt } ?: return
         val clock = estimate ?: return
         val scope = ClockScope(credentials.generation, attempt, processClockEpoch)
+        saveCapture(attempt, credentials.generation, lane) {
+            finish.record(credentials.origin, scope, heat, clock, lane, capturedAt)
+        }
+    }
+
+    fun captureStopwatch(attempt: UUID, lane: Int, duration: Long) {
+        val credentials = pairing ?: return
+        val heat = mutable.value.heat?.takeIf { it.attempt == attempt } ?: return
+        saveCapture(attempt, credentials.generation, lane) {
+            stopwatch.record(credentials.origin, credentials.generation, attempt, heat, lane, duration)
+        }
+    }
+
+    private fun saveCapture(attempt: UUID, generation: UUID, lane: Int, record: suspend () -> OutboxEvent?) {
+        val current = mutable.value
         if (lane in current.capturing || lane in current.delivery) return
         mutable.update { it.copy(capturing = it.capturing + lane, captureStorageFailed = false) }
         viewModelScope.launch {
             try {
-                val event = finish.record(credentials.origin, scope, heat, clock, lane, capturedAt)
+                val event = record()
                 if (event != null) {
                     if (outboxEvents.none { it.id == event.id }) outboxEvents = outboxEvents + event
                     updateLaneStatus()
@@ -150,7 +166,9 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
             } catch (_: JSONException) {
                 mutable.update { it.copy(captureStorageFailed = true) }
             } finally {
-                if (currentScope() == scope) mutable.update { it.copy(capturing = it.capturing - lane) }
+                if (pairing?.generation == generation && mutable.value.heat?.attempt == attempt) {
+                    mutable.update { it.copy(capturing = it.capturing - lane) }
+                }
             }
         }
     }

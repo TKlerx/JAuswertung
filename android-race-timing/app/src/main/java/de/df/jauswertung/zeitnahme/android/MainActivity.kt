@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TimingScreen(timing.state.collectAsStateWithLifecycle().value, timing::pair, ::requestLocalNetwork,
-                timing::captureFinish)
+                timing::captureFinish, timing::captureStopwatch)
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) { timing.observeDesk() }

@@ -46,9 +46,9 @@ Task paths are relative to the repository root. `[P]` marks work that can run al
 
 **Independent check** — With a running attempt and an expired or absent clock estimate, send `1:05,20` for an assigned stopwatch lane. The desk reviews 65.20 s for that lane. Zero, negative or malformed values yield a field error and no event.
 
-- [ ] T017 [US3] Write `/api/stoppuhr` consumer contract and input tests in `android-race-timing/app/src/test/java/de/df/jauswertung/zeitnahme/android/net/StopwatchContractTest.kt` for the expected integer-microsecond payload, malformed and overflowing inputs, wrong lane or mode, and capture with absent or expired sync.
-- [ ] T018 [US3] Implement manual duration parsing and event creation in `android-race-timing/app/src/main/java/de/df/jauswertung/zeitnahme/android/capture/StopwatchCapture.kt` after T017. Enforce “positive elapsed duration, parsed with integer arithmetic and checked for overflow” and “Manual stopwatch entry does not need an estimate.” Verify the active attempt and assigned mode and submit through the existing outbox and sender.
-- [ ] T019 [US3] Add the manual-entry control with German inline validation and per-lane acknowledgement in `android-race-timing/app/src/main/java/de/df/jauswertung/zeitnahme/android/ui/LaneScreen.kt` and `android-race-timing/app/src/main/res/values/strings.xml`.
+- [X] T017 [US3] Write `/api/stoppuhr` consumer contract and input tests in `android-race-timing/app/src/test/java/de/df/jauswertung/zeitnahme/android/net/StopwatchContractTest.kt` for the expected integer-microsecond payload, malformed and overflowing inputs, wrong lane or mode, and capture with absent or expired sync.
+- [X] T018 [US3] Implement manual duration parsing and event creation in `android-race-timing/app/src/main/java/de/df/jauswertung/zeitnahme/android/capture/StopwatchCapture.kt` after T017. Enforce “positive elapsed duration, parsed with integer arithmetic and checked for overflow” and “Manual stopwatch entry does not need an estimate.” Verify the active attempt and assigned mode and submit through the existing outbox and sender.
+- [X] T019 [US3] Add the manual-entry control with German inline validation and per-lane acknowledgement in `android-race-timing/app/src/main/java/de/df/jauswertung/zeitnahme/android/ui/LaneScreen.kt` and `android-race-timing/app/src/main/res/values/strings.xml`.
 
 ## Phase 6 — US4 Deliver after disconnection (P4)
 
