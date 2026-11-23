@@ -2,6 +2,7 @@ package de.df.jauswertung.zeitnahme.android.net
 
 import de.df.jauswertung.zeitnahme.android.clock.ClockScope
 import de.df.jauswertung.zeitnahme.android.clock.ClockSync
+import de.df.jauswertung.zeitnahme.android.clock.ClockEstimate
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -9,6 +10,17 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ClockContractTest {
+    @Test
+    fun elapsedTimeUsesTheDeskTimestampEvenWhenTheStartArrivesLate() {
+        val scope = ClockScope(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
+        val epoch = UUID.randomUUID()
+        val estimate = ClockEstimate(scope, epoch, UUID.randomUUID(), 30_000, 300, 5_000_000, 20, 200)
+        val start = DeskStart(5_000_000, epoch)
+        assertEquals(3L, estimate.elapsedSeconds(start, scope, 8_170_000))
+        assertNull(estimate.elapsedSeconds(start.copy(deskEpoch = UUID.randomUUID()), scope, 8_170_000))
+        assertNull(estimate.elapsedSeconds(start, scope.copy(attempt = UUID.randomUUID()), 8_170_000))
+    }
+
     @Test
     fun checksBothWireRequestsAndTheExpiryAndCaptureBoundaries() = runBlocking {
         val scope = ClockScope(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())

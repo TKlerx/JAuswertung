@@ -55,6 +55,8 @@ data class TimingScreenState(
     val unresolved: List<OutboxEvent> = emptyList(),
     val captureStorageFailed: Boolean = false,
     val hasCaptures: Boolean = false,
+    val roundTripMillis: Long? = null,
+    val runningSeconds: Long? = null,
 ) {
     fun canCapture(lane: Int, phoneTiming: Boolean): Boolean =
         heat?.state == HeatState.LAEUFT && lane !in capturing && lane !in delivery &&
@@ -83,6 +85,7 @@ class TimingViewModel internal constructor(
     private var pairing: DeskPairing? = null
     private var estimate: ClockEstimate? = null
     private var outboxEvents = emptyList<OutboxEvent>()
+    private var lastRoundTripAt: Long? = null
 
     init {
         viewModelScope.launch {
@@ -100,6 +103,7 @@ class TimingViewModel internal constructor(
     fun setNetworkAllowed(allowed: Boolean) {
         val granted = allowed && !mutable.value.networkAllowed
         mutable.update { it.copy(networkAllowed = allowed) }
+        if (!allowed) clearRoundTrip()
         if (granted) delivery.request()
     }
 
@@ -108,6 +112,7 @@ class TimingViewModel internal constructor(
     internal suspend fun exportRawTiming(): String = outbox.observe().first().rawTimingCsv()
 
     suspend fun observeDesk(): Unit = coroutineScope {
+        clearRoundTrip()
         launch { delivery.replay { mutable.value.networkAllowed && sendPending() } }
         if (mutable.value.loading) {
             try {
@@ -221,7 +226,10 @@ class TimingViewModel internal constructor(
             val heat = current.heat
             val currentPath = http.networkPath()
             if (scope != selectedScope || path != currentPath) nextSample = 0
-            if (path != currentPath) delivery.request()
+            if (path != currentPath) {
+                clearRoundTrip()
+                delivery.request()
+            }
             selectedScope = scope
             path = currentPath
             if (scope != null && credentials != null && current.networkAllowed && heat?.syncRequired == true &&
@@ -259,21 +267,38 @@ class TimingViewModel internal constructor(
 
     private fun updateSyncStatus() {
         val scope = currentScope()
-        val sync = scope != null && estimate?.map(scope, monotonicMicros()) != null
-        mutable.update { it.copy(syncValid = sync) }
+        val now = monotonicMicros()
+        val clock = estimate
+        val sync = scope != null && clock?.map(scope, now) != null
+        val start = mutable.value.heat?.takeIf { it.state == HeatState.LAEUFT }?.startedAt
+        val seconds = if (start != null && scope != null) clock?.elapsedSeconds(start, scope, now) else null
+        val fresh = lastRoundTripAt?.let { now - it < 3_000_000 } == true
+        mutable.update { it.copy(syncValid = sync, runningSeconds = seconds,
+            roundTripMillis = it.roundTripMillis.takeIf { fresh }) }
+    }
+
+    private fun clearRoundTrip() {
+        lastRoundTripAt = null
+        mutable.update { it.copy(roundTripMillis = null) }
     }
 
     private suspend fun refresh() {
+        val path = http.networkPath()
         try {
             val heat = session.refresh()
+            val rtt = session.lastRoundTripMicros?.takeIf { path == http.networkPath() && mutable.value.networkAllowed }
+            lastRoundTripAt = rtt?.let { monotonicMicros() }
+            val ms = rtt?.let { (it + 999) / 1_000 }
             if (mutable.value.problem != null) delivery.request()
             mutable.update {
-                if (it.heat?.attempt == heat?.attempt) it.copy(heat = heat, problem = null)
+                if (it.heat?.attempt == heat?.attempt) it.copy(heat = heat, problem = null, roundTripMillis = ms)
                 else it.copy(heat = heat, problem = null, capturing = emptySet(), delivery = emptyMap(),
-                    syncValid = false, captureStorageFailed = false)
+                    syncValid = false, captureStorageFailed = false, runningSeconds = null, roundTripMillis = ms)
             }
             updateLaneStatus()
+            updateSyncStatus()
         } catch (failure: DeskFailure) {
+            clearRoundTrip()
             if (failure.problem == DeskProblem.EXPIRED) {
                 pairing = null
                 estimate = null

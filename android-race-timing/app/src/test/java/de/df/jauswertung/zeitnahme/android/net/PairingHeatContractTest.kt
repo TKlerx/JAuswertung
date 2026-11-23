@@ -50,6 +50,20 @@ class PairingHeatContractTest {
     }
 
     @Test
+    fun readsRecordedStartAndDeskEpochWithoutRequiringThemOnOlderDesks() = runBlocking {
+        saved = DeskPairing(origin, "Bahnaufsicht", UUID.randomUUID(), "test-bearer", false)
+        val epoch = UUID.randomUUID()
+        val running = activeHeat.replace("BEREIT", "LAEUFT")
+        var reply = running
+        val session = session { _, _, _, _ -> DeskResponse(200, reply, 7_200) }
+        session.restore()
+        assertNull(session.refresh()?.startedAt)
+        reply = JSONObject(running).put("startZeitUs", -123_456L).put("schreibtischEpoche", epoch.toString()).toString()
+        assertEquals(DeskStart(-123_456L, epoch), session.refresh()?.startedAt)
+        assertEquals(7_200L, session.lastRoundTripMicros)
+    }
+
+    @Test
     fun distinguishesConsumedCodeFromAmbiguousResponseWithoutResending() = runBlocking {
         var requests = 0
         val session = session { _, _, _, _ ->

@@ -3,6 +3,7 @@ package de.df.jauswertung.zeitnahme.android.clock
 import android.os.SystemClock
 import de.df.jauswertung.zeitnahme.android.net.DeskEndpoint
 import de.df.jauswertung.zeitnahme.android.net.DeskResponse
+import de.df.jauswertung.zeitnahme.android.net.DeskStart
 import java.io.IOException
 import java.util.UUID
 import org.json.JSONException
@@ -40,6 +41,16 @@ internal data class ClockEstimate(
             val drift = Math.multiplyExact(age, driftPpm)
             val rounded = drift / MICROS_PER_SECOND + if (drift % MICROS_PER_SECOND == 0L) 0 else 1
             mapped.takeIf { Math.addExact(uncertainty, rounded) <= CAPTURE_BUDGET_US }
+        } catch (_: ArithmeticException) {
+            null
+        }
+    }
+
+    fun elapsedSeconds(start: DeskStart, captureScope: ClockScope, phoneMicros: Long): Long? {
+        if (start.deskEpoch != deskEpoch) return null
+        val deskMicros = map(captureScope, phoneMicros) ?: return null
+        return try {
+            Math.subtractExact(deskMicros, start.micros).takeIf { it >= 0 }?.div(MICROS_PER_SECOND)
         } catch (_: ArithmeticException) {
             null
         }

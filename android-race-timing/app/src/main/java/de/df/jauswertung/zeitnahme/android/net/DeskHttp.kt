@@ -21,7 +21,7 @@ enum class DeskEndpoint(val path: String) {
     STOPWATCH("/api/stoppuhr"),
 }
 
-data class DeskResponse(val status: Int, val body: String)
+data class DeskResponse(val status: Int, val body: String, val roundTripMicros: Long? = null)
 
 class DeskHttp(context: Context) {
     private val connectivity = requireNotNull(
@@ -54,15 +54,17 @@ class DeskHttp(context: Context) {
             pairing?.let { connection.setRequestProperty("Authorization", "Bearer ${it.bearer}") }
             val bytes = request.toString().toByteArray(Charsets.UTF_8)
             connection.setFixedLengthStreamingMode(bytes.size)
-            if (onSent != null) {
+            val sent = if (onSent != null || endpoint == DeskEndpoint.HEAT) {
                 connection.connect()
-                onSent(monotonicMicros())
-            }
+                monotonicMicros().also { onSent?.invoke(it) }
+            } else null
             connection.outputStream.use { it.write(bytes) }
             val status = connection.responseCode
-            onReceived?.invoke(monotonicMicros())
+            val received = monotonicMicros()
+            onReceived?.invoke(received)
             val input = if (status >= 400) connection.errorStream else connection.inputStream
-            DeskResponse(status, input?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty())
+            DeskResponse(status, input?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty(),
+                sent?.let { received - it })
         } finally {
             connection.disconnect()
         }

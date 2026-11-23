@@ -41,6 +41,9 @@ internal fun LaneScreen(
     onStopwatch: (UUID, Int, Long) -> Unit,
 ) {
     Text(stringResource(R.string.paired_as, name), style = MaterialTheme.typography.titleMedium)
+    val rtt = state.roundTripMillis
+    Text(if (rtt == null) stringResource(R.string.desk_rtt_unavailable) else stringResource(R.string.desk_rtt, rtt),
+        style = MaterialTheme.typography.bodySmall)
     val heat = state.heat
     if (heat == null) {
         Text(stringResource(R.string.waiting_for_heat))
@@ -52,6 +55,10 @@ internal fun LaneScreen(
         Text(stringResource(R.string.last_known_heat))
     }
     Text(stringResource(heat.statusText()), style = MaterialTheme.typography.titleMedium)
+    state.runningSeconds?.let { seconds ->
+        Text(stringResource(R.string.desk_elapsed, seconds / 60, seconds % 60),
+            style = MaterialTheme.typography.titleMedium)
+    }
     if (heat.state == HeatState.LAEUFT && heat.syncRequired && !state.syncValid) {
         Text(stringResource(R.string.capture_clock_unavailable), color = MaterialTheme.colorScheme.error)
     }

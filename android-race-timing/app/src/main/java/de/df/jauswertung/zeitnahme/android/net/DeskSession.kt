@@ -30,6 +30,8 @@ enum class HeatState { BEREIT, TISCHSTART, FREIGEGEBEN, START_UNSICHER, LAEUFT, 
 
 data class AssignedLane(val number: Int, val participant: String, val phoneTiming: Boolean)
 
+data class DeskStart(val micros: Long, val deskEpoch: UUID)
+
 data class DeskHeat(
     val attempt: UUID,
     val id: UUID,
@@ -38,6 +40,7 @@ data class DeskHeat(
     val ready: Boolean,
     val syncRequired: Boolean,
     val lanes: List<AssignedLane>,
+    val startedAt: DeskStart? = null,
 )
 
 class DeskSession internal constructor(
@@ -53,6 +56,8 @@ class DeskSession internal constructor(
     private val mutex = Mutex()
     private var active: DeskPairing? = null
     var lastHeat: DeskHeat? = null
+        private set
+    internal var lastRoundTripMicros: Long? = null
         private set
 
     suspend fun restore(): DeskPairing? = mutex.withLock {
@@ -83,6 +88,7 @@ class DeskSession internal constructor(
     }
 
     suspend fun refresh(): DeskHeat? = mutex.withLock {
+        lastRoundTripMicros = null
         val pairing = active ?: throw DeskFailure(DeskProblem.EXPIRED)
         val response = request(pairing.origin, DeskEndpoint.HEAT, JSONObject(), pairing)
         if (response.status == 401) {
@@ -105,6 +111,7 @@ class DeskSession internal constructor(
             throw DeskFailure(DeskProblem.INVALID_RESPONSE)
         }
         lastHeat = heat
+        lastRoundTripMicros = response.roundTripMicros
         heat
     }
 
@@ -153,6 +160,14 @@ class DeskSession internal constructor(
             AssignedLane(lane.getInt("nummer"), lane.getString("teilnehmer"), lane.getBoolean("telefonzeit"))
         }.sortedBy(AssignedLane::number)
         require(lanes.all { it.number > 0 } && lanes.distinctBy(AssignedLane::number).size == lanes.size)
+        val start = if (!has("startZeitUs")) null else {
+            val micros = when (val value = get("startZeitUs")) {
+                is Long -> value
+                is Int -> value.toLong()
+                else -> throw JSONException("startZeitUs")
+            }
+            DeskStart(micros, UUID.fromString(getString("schreibtischEpoche")))
+        }
         return DeskHeat(
             UUID.fromString(getString("versuch")),
             UUID.fromString(getString("lauf")),
@@ -161,6 +176,7 @@ class DeskSession internal constructor(
             getBoolean("bereit"),
             getBoolean("abgleich"),
             lanes,
+            start,
         )
     }
 }

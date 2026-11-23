@@ -8,6 +8,9 @@
     <string name="pairing_code">Kopplungscode</string>
     <string name="pair">Koppeln</string>
     <string name="paired_as">Gekoppelt als %1$s</string>
+    <string name="desk_rtt">HTTPS-Rundlauf zum Tisch: %1$d ms</string>
+    <string name="desk_rtt_unavailable">Keine aktuelle Latenzmessung zum Tisch</string>
+    <string name="desk_elapsed">Laufzeit %1$d:%2$02d</string>
     <string name="local_network_explanation">Für den Wettkampftisch ist Zugriff auf das lokale Netzwerk nötig. Erlaube den Zugriff hier oder in den Android-Einstellungen.</string>
     <string name="allow_local_network">Netzwerkzugriff erlauben</string>
     <string name="invalid_address">Gib die HTTPS-Adresse des Wettkampftischs ohne Pfad ein.</string>
