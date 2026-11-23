@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  background: #edf5f2;
+  color: #12343a;
+}
+body { margin: 0; }
+main { max-width: 38rem; margin: auto; padding: 1rem; }
+header { margin-bottom: 1rem; }
+h1, h2, h3, p { margin: 0 0 .6rem; }
+form, label, #starter, #bahnen, article { display: grid; gap: .65rem; }
+form, article, #starter {
+  background: white;
+  border: 1px solid #ccdeda;
+  border-radius: .65rem;
+  padding: 1rem;
+}
+#starter { margin-bottom: .75rem; }
+input, button { font: inherit; min-height: 3.25rem; box-sizing: border-box; border-radius: .5rem; }
+input { padding: .6rem; width: 100%; border: 1px solid #617e79; }
+button { padding: .6rem 1rem; background: #006456; border: 0; color: white; font-weight: 700; }
+button:disabled { background: #d3e2de; color: #415b54; }
+article button { min-height: 4rem; }
+:focus-visible { outline: 3px solid #ac5b00; outline-offset: 3px; }
+#meldungen { padding-inline-start: 1.25rem; }
+#meldungen li { margin-block: .4rem; }
+[hidden] { display: none !important; }
