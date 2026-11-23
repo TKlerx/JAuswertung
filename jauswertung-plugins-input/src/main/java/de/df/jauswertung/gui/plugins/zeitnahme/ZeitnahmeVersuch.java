@@ -412,7 +412,7 @@ final class ZeitnahmeVersuch {
         }
     }
 
-    private static long schreibtischzeit(ZeitnahmeEreignis.Start start) {
+    static long schreibtischzeit(ZeitnahmeEreignis.Start start) {
         return start.schaetzung() == null ? start.zeit() : start.schaetzung().schreibtischzeit(start.zeit());
     }
 

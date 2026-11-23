@@ -70,9 +70,16 @@ class ZeitnahmeDienstTest {
                     "schaetzung", startuhr.get("id").asText());
             assertEquals(200, post(client, url, "startmeldung", startzugang, start).statusCode());
             assertEquals(ZeitnahmeVersuch.Zustand.START_UNSICHER, versuch.zustand());
+            assertFalse(json.readTree(post(client, url, "lauf", zielzugang, Map.of()).body()).has("startZeitUs"));
             long frist = grant.get("frist").asLong();
             assertFalse(versuch.startBestaetigen(frist - 1, true));
             assertTrue(versuch.startBestaetigen(frist, true));
+            var gestartet = json.readTree(post(client, url, "lauf", zielzugang, Map.of()).body());
+            assertEquals(startzeit + startuhr.get("versatz").asLong(),
+                    gestartet.path("startZeitUs").asLong(Long.MIN_VALUE));
+            var tischuhr = json.readTree(post(client, url, "uhr", zielzugang,
+                    Map.of("versuch", versuch.id(), "epoche", zielepoch)).body());
+            assertEquals(tischuhr.path("schreibtischEpoche"), gestartet.path("schreibtischEpoche"));
             long zielzeit = startzeit + startuhr.get("versatz").asLong() + 5_000_000 - zieluhr.get("versatz").asLong();
             var ziel = Map.of("versuch", versuch.id(), "ereignis", UUID.randomUUID(), "bahn", 3, "zeit", zielzeit,
                     "epoche", zielepoch, "schaetzung", zieluhr.get("id").asText());
@@ -81,6 +88,7 @@ class ZeitnahmeDienstTest {
             abgleich(client, url, zielzugang, versuch.id(), UUID.randomUUID());
             versuch.alsUebernommenSchliessen();
             dienst.laufSetzen(sitzung.anlegen(stand, 45_000_000), 400, false);
+            assertFalse(json.readTree(post(client, url, "lauf", zielzugang, Map.of()).body()).has("startZeitUs"));
             assertEquals(200, post(client, url, "ziel", zielzugang, ziel).statusCode());
             assertEquals(5_000_000, versuch.ergebnisse().getFirst().dauer());
             assertTrue(versuch.ergebnisse().getFirst().unsicher());

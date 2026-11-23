@@ -278,12 +278,18 @@ final class ZeitnahmeDienst implements AutoCloseable {
         var bahnen = stand.bahnen().stream().filter(bahn -> geraet.rolle().equals(bahn.telefon()))
                 .map(bahn -> Map.of("nummer", bahn.nummer(), "teilnehmer", bahn.teilnehmer(), "telefonzeit", bahn.telefonzeit()))
                 .toList();
-        return ok(Map.ofEntries(Map.entry("name", geraet.name()), Map.entry("versuch", v.id()),
-                Map.entry("lauf", stand.lauf()), Map.entry("disziplin", stand.disziplin()), Map.entry("bahnen", bahnen),
+        Map<String, Object> antwort = new HashMap<>(Map.ofEntries(
+                Map.entry("name", geraet.name()), Map.entry("versuch", v.id()), Map.entry("lauf", stand.lauf()),
+                Map.entry("disziplin", stand.disziplin()), Map.entry("bahnen", bahnen),
                 Map.entry("starter", geraet.rolle().equals(stand.starttelefon())),
-                Map.entry("abgleich", abgleich(v, geraet.rolle())), Map.entry("bereit", v.bereit(jetzt)),
-                Map.entry("zustand", v.zustand().name()), Map.entry("horndauer", lauf.horndauer()),
-                Map.entry("countdown", lauf.countdown())));
+                Map.entry("abgleich", abgleich(v, geraet.rolle())), Map.entry("horndauer", lauf.horndauer()),
+                Map.entry("countdown", lauf.countdown()), Map.entry("schreibtischEpoche", schreibtischEpoche)));
+        synchronized (v) {
+            antwort.put("bereit", v.bereit(jetzt));
+            antwort.put("zustand", v.zustand().name());
+            v.start().ifPresent(start -> antwort.put("startZeitUs", ZeitnahmeVersuch.schreibtischzeit(start)));
+        }
+        return ok(antwort);
     }
 
     private static boolean abgleich(ZeitnahmeVersuch v, UUID rolle) {
