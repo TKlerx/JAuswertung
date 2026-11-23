@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 final class ZeitnahmeVersuch {
@@ -328,6 +329,38 @@ final class ZeitnahmeVersuch {
                 .map(zeit -> new Ergebnis(zeit.bahn(), zeit.dauer(), false,
                         zeit.geraet() == null ? Quelle.STOPPUHR_TISCH : Quelle.STOPPUHR_HANDY, zeit.id()));
         return Stream.concat(erfasst, manuell).toList();
+    }
+
+    synchronized String rohdatenCsv() {
+        var csv = new StringBuilder("attempt_id,heat_id,state,event_id,kind,lane,clock_epoch,estimate_id,"
+                + "raw_timestamp_us,desk_timestamp_us,desk_start_us,duration_us,clock_offset_us,uncertain\n");
+        Long startzeit = start == null ? null : schreibtischzeit(start);
+        if (start == null) {
+            rohdatenZeile(csv, null, "ATTEMPT", null, null, null, null, null, null, null);
+        } else {
+            rohdatenZeile(csv, start.id(), "START", null, start.schaetzung(), start.zeit(),
+                    startzeit, startzeit, null, startUnsicher);
+        }
+        for (var ziel : ziele.values()) {
+            long schreibtischzeit = ziel.schaetzung().schreibtischzeit(ziel.zeit());
+            var ergebnis = start == null ? null : ergebnis(ziel);
+            rohdatenZeile(csv, ziel.id(), "FINISH", ziel.bahn(), ziel.schaetzung(), ziel.zeit(),
+                    schreibtischzeit, startzeit, ergebnis == null ? null : ergebnis.dauer(),
+                    ergebnis == null ? null : ergebnis.unsicher());
+        }
+        for (var zeit : stoppuhrIds.values()) {
+            rohdatenZeile(csv, zeit.id(), zeit.geraet() == null ? "STOPWATCH_DESK" : "STOPWATCH", zeit.bahn(),
+                    null, null, null, startzeit, zeit.dauer(), null);
+        }
+        return csv.toString();
+    }
+
+    private void rohdatenZeile(StringBuilder csv, UUID ereignis, String art, Integer bahn,
+            Uhrabgleich.Schaetzung uhr, Long roh, Long tisch, Long startzeit, Long dauer, Boolean unsicher) {
+        csv.append(Stream.of(id, laufstand.lauf(), zustand, ereignis, art, bahn,
+                uhr == null ? null : uhr.epoche(), uhr == null ? null : uhr.id(),
+                roh, tisch, startzeit, dauer, uhr == null ? null : uhr.versatz(), unsicher)
+                .map(wert -> Objects.toString(wert, "")).collect(Collectors.joining(","))).append('\n');
     }
 
     synchronized boolean stoppuhrErfassen(ZeitnahmeEreignis.Stoppuhr ereignis) {

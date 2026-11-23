@@ -5,6 +5,9 @@ import java.awt.GridLayout;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Arrays;
@@ -39,7 +42,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 
+import org.lisasp.swing.filechooser.FileChooserUtils;
+import org.lisasp.swing.filechooser.filefilter.SimpleFileFilter;
+
 import de.df.jauswertung.gui.util.I18n;
+import de.df.jutils.gui.util.DialogUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -76,6 +83,7 @@ final class JZeitnahmeLauf extends JDialog {
     private final JButton verwerfen = new JButton(text("Verwerfen"));
     private final JButton neuerVersuch = new JButton(text("NeuerVersuch"));
     private final JButton ergebnisPruefen = new JButton(text("Ergebnisse"));
+    private final JButton rohdaten = new JButton(text("Rohdaten"));
     private final JButton netz = new JButton(text("NetzStart"));
     private final JButton koppeln = new JButton(text("NetzKoppeln"));
     private final JLabel netzStatus = new JLabel();
@@ -114,7 +122,7 @@ final class JZeitnahmeLauf extends JDialog {
         einstellung.add(new JLabel());
         JPanel aktionen = new JPanel();
         for (JButton taste : List.of(aktualisieren, scharf, start, startErneut, bestaetigen, verwerfen, ergebnisPruefen,
-                neuerVersuch)) {
+                rohdaten, neuerVersuch)) {
             aktionen.add(taste);
         }
         JPanel fuss = new JPanel(new BorderLayout());
@@ -153,6 +161,7 @@ final class JZeitnahmeLauf extends JDialog {
         verwerfen.addActionListener(event -> virtuell.versuch().verwerfen(Startsignal.jetzt()));
         ergebnisPruefen.addActionListener(event ->
                 new JZeitnahmeErgebnisse(this, uebernahme, auswahl, virtuell.versuch()).setVisible(true));
+        rohdaten.addActionListener(event -> rohdatenSpeichern());
         neuerVersuch.addActionListener(event -> {
             virtuell.versuch().schliessen();
             virtuell = null;
@@ -597,6 +606,7 @@ final class JZeitnahmeLauf extends JDialog {
                 || zustand == ZeitnahmeVersuch.Zustand.BEREIT || zustand == ZeitnahmeVersuch.Zustand.LAEUFT));
         List<ZeitnahmeVersuch.Ergebnis> ergebnisse = versuch == null ? List.of() : versuch.ergebnisse();
         ergebnisPruefen.setEnabled(offen && erfasstStart);
+        rohdaten.setEnabled(versuch != null);
         bahnfelder.forEach((nummer, felder) -> {
             boolean erfasst = virtuell != null && virtuell.zielVorhanden(nummer);
             int modus = felder.telefon().getSelectedIndex();
@@ -615,6 +625,35 @@ final class JZeitnahmeLauf extends JDialog {
                 : laufenderCountdown != null ? text("CountdownAktiv")
                 : zustand == null ? text(auswahl == null ? "KeinLauf" : "Vorbereiten")
                 : zustand == ZeitnahmeVersuch.Zustand.BEREIT && !bereit ? text("NetzWartet") : text(zustand.name()));
+    }
+
+    private void rohdatenSpeichern() {
+        String csv = virtuell.versuch().rohdatenCsv();
+        String datei = FileChooserUtils.saveFile(this, new SimpleFileFilter(text("RohdatenDatei"), "csv"));
+        if (datei == null) return;
+        Path ziel = Path.of(datei);
+        if (Files.exists(ziel) && !DialogUtils.ask(this, I18n.get("OverwriteFileQuestion", datei),
+                I18n.get("OverwriteFileQuestion.Note", datei))) return;
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws IOException {
+                Files.writeString(ziel, csv);
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException ex) {
+                    log.warn("Zeitnahme-Rohdaten konnten nicht gespeichert werden", ex.getCause());
+                    JOptionPane.showMessageDialog(JZeitnahmeLauf.this, text("RohdatenFehler"), text("Titel"),
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
     }
 
     private Integer zahl(JSpinner feld) {
