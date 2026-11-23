@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zeitnahme · JAuswertung</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Zeitnahme</h1>
+      <p id="verbindung" role="status">Verbinde …</p>
+    </header>
+    <form id="paarung" hidden>
+      <label>Gerätename <input id="name" maxlength="60" required></label>
+      <label>Kopplungscode <input id="code" maxlength="64" autocomplete="off" autocapitalize="off" required></label>
+      <button>Handy koppeln</button>
+    </form>
+    <p id="meldung" role="status"></p>
+    <section id="lauf" hidden aria-label="Aktueller Lauf">
+      <h2 id="disziplin"></h2>
+      <section id="starter" hidden aria-label="Startsignal">
+        <button id="testton" type="button">Testton ohne Zeitnahme</button>
+        <button id="start" type="button">Startsignal auslösen</button>
+      </section>
+      <div id="bahnen"></div>
+    </section>
+    <ul id="meldungen" aria-label="Übertragungsstatus"></ul>
+    <noscript>Für die Zeitnahme ist JavaScript erforderlich.</noscript>
+  </main>
+</body>
+</html>
