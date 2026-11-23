@@ -1,4 +1,7 @@
 <resources>
+    <string name="export_raw_timing">Rohdaten exportieren</string>
+    <string name="export_raw_timing_success">Zeitnahme-Rohdaten gespeichert.</string>
+    <string name="export_raw_timing_failure">Zeitnahme-Rohdaten konnten nicht gespeichert werden.</string>
     <string name="app_name">JAuswertung Zeitnahme</string>
     <string name="desk_address">HTTPS-Adresse des Wettkampftischs</string>
     <string name="device_name">Gerätename</string>

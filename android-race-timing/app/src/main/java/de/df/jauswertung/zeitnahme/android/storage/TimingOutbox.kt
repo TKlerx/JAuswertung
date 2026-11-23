@@ -48,6 +48,16 @@ data class OutboxEvent(
     }
 }
 
+internal fun List<OutboxEvent>.rawTimingCsv(): String = buildString {
+    appendLine("attempt_id,event_id,kind,lane,clock_epoch,estimate_id,raw_timestamp_us,duration_us,status,send_attempts")
+    for (event in this@rawTimingCsv) {
+        val finish = event.kind == EventKind.FINISH
+        appendLine(listOf(event.attemptId, event.id, event.kind, event.lane, event.clockEpoch, event.estimateId,
+            event.timeMicros.takeIf { finish }, event.timeMicros.takeUnless { finish }, event.status,
+            event.sendAttempts).joinToString(",") { it?.toString().orEmpty() })
+    }
+}
+
 @Dao
 abstract class TimingOutbox {
     @Insert(onConflict = OnConflictStrategy.IGNORE)

@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -48,6 +49,7 @@ fun TimingScreen(
     onFinish: (UUID, Int) -> Unit,
     onStopwatch: (UUID, Int, Long) -> Unit,
     onRetry: () -> Unit,
+    onExport: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
@@ -85,6 +87,9 @@ fun TimingScreen(
                         else -> LaneScreen(state.pairedName, state, onFinish, onStopwatch)
                     }
                     PreviousDeliveries(state)
+                    if (state.hasCaptures) {
+                        TextButton(onClick = onExport) { Text(stringResource(R.string.export_raw_timing)) }
+                    }
                 }
             }
         }

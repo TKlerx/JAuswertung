@@ -28,6 +28,7 @@ import de.df.jauswertung.zeitnahme.android.storage.DeskPairing
 import de.df.jauswertung.zeitnahme.android.storage.OutboxEvent
 import de.df.jauswertung.zeitnahme.android.storage.PairingStore
 import de.df.jauswertung.zeitnahme.android.storage.TimingDatabase
+import de.df.jauswertung.zeitnahme.android.storage.rawTimingCsv
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.UUID
@@ -35,6 +36,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONException
@@ -52,6 +54,7 @@ data class TimingScreenState(
     val delivery: Map<Int, OutboxEvent> = emptyMap(),
     val unresolved: List<OutboxEvent> = emptyList(),
     val captureStorageFailed: Boolean = false,
+    val hasCaptures: Boolean = false,
 ) {
     fun canCapture(lane: Int, phoneTiming: Boolean): Boolean =
         heat?.state == HeatState.LAEUFT && lane !in capturing && lane !in delivery &&
@@ -101,6 +104,8 @@ class TimingViewModel internal constructor(
     }
 
     fun retryPending() = delivery.request()
+
+    internal suspend fun exportRawTiming(): String = outbox.observe().first().rawTimingCsv()
 
     suspend fun observeDesk(): Unit = coroutineScope {
         launch { delivery.replay { mutable.value.networkAllowed && sendPending() } }
@@ -249,7 +254,7 @@ class TimingViewModel internal constructor(
             .filter { it.pairingGeneration == scope.pairing && it.attemptId == scope.attempt }
             .associateBy(OutboxEvent::lane)
         val unresolved = outboxEvents.filter { it.status != DeliveryStatus.ACCEPTED }
-        mutable.update { it.copy(delivery = outcomes, unresolved = unresolved) }
+        mutable.update { it.copy(delivery = outcomes, unresolved = unresolved, hasCaptures = outboxEvents.isNotEmpty()) }
     }
 
     private fun updateSyncStatus() {
