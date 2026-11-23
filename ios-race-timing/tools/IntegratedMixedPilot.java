@@ -220,11 +220,18 @@ public final class IntegratedMixedPilot {
                     } else if (command.equals("arm")) {
                         SwingUtilities.invokeAndWait(() -> button(timing.get(), "Lauf scharfschalten").doClick());
                     } else if (command.equals("start")) {
-                        SwingUtilities.invokeAndWait(() -> {
-                            var start = button(timing.get(), "Startsignal auslösen");
-                            if (!start.isEnabled()) throw new AssertionError("Desk not ready to start");
-                            start.doClick(0);
-                        });
+                        var started = new java.util.concurrent.atomic.AtomicBoolean();
+                        for (int i = 0; i < 15 && !started.get(); i++) {
+                            SwingUtilities.invokeAndWait(() -> {
+                                var start = button(timing.get(), "Startsignal auslösen");
+                                if (start.isEnabled()) {
+                                    start.doClick(0);
+                                    started.set(true);
+                                }
+                            });
+                            if (!started.get()) Thread.sleep(100);
+                        }
+                        if (!started.get()) throw new AssertionError("Desk not ready to start");
                         var countdown = JZeitnahmeLauf.class.getDeclaredField("laufenderCountdown");
                         countdown.setAccessible(true);
                         for (int i = 0; i < 60; i++) {
