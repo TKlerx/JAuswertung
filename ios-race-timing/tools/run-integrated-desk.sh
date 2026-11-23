@@ -28,16 +28,44 @@ xcrun simctl bootstatus "$device" -b
 xcrun simctl keychain "$device" add-root-cert "$work/ca.pem"
 
 export PILOT_JAVA_HOME="$JAVA_HOME"
-python3 "$repo/ios-race-timing/tools/ios_desk_control.py" "$work" &
-desk_control=$!
-trap 'kill "$desk_control" 2>/dev/null || true' EXIT
+gui="gui/$(id -u)"
+label="de.df.jauswertung.timing-pilot"
+controller="$repo/ios-race-timing/tools/ios_desk_control.py"
+if launchctl print "$gui" >/dev/null 2>&1; then
+    python3 - "$label" "$controller" "$work" <<'PY'
+import os
+from pathlib import Path
+import plistlib
+import sys
+
+label, controller, directory = sys.argv[1:]
+work = Path(directory)
+with (work / "desk-control.plist").open("wb") as target:
+    plistlib.dump({"Label": label, "RunAtLoad": True, "LimitLoadToSessionType": "Aqua",
+                   "ProgramArguments": [sys.executable, controller, directory],
+                   "EnvironmentVariables": {"PILOT_JAVA_HOME": os.environ["PILOT_JAVA_HOME"]},
+                   "StandardErrorPath": str(work / "desk-control.log")}, target)
+PY
+fi
+if [[ -f desk-control.plist ]] && launchctl bootstrap "$gui" "$work/desk-control.plist"; then
+    trap 'launchctl bootout "$gui/$label" 2>/dev/null || true' EXIT
+else
+    AWT_FORCE_HEADFUL=true python3 "$controller" "$work" 2> desk-control.log &
+    desk_control=$!
+    trap 'kill "$desk_control" 2>/dev/null || true' EXIT
+fi
 
 for attempt in {1..90}; do
     if [[ -f "$work/control-ready" ]]; then break; fi
-    kill -0 "$desk_control"
+    if [[ -s "$work/process-result.txt" ]]; then break; fi
     sleep 1
 done
-test -f "$work/control-ready"
+if [[ ! -f "$work/control-ready" ]]; then
+    for log in desk-control.log process-result.txt; do
+        if [[ -f "$log" ]]; then cat "$log"; fi
+    done
+    exit 1
+fi
 
 cd "$repo/ios-race-timing"
 xcodebuild test -project Zeitnahme.xcodeproj -scheme Zeitnahme \
