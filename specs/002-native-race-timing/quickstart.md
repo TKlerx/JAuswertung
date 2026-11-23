@@ -56,6 +56,15 @@ In the second process, the app restored the pending event and resent the identic
 
 The three local Android instrumentation checks passed for transaction rollback, durable replay and 401 blocking. Both live restart phases, all nine JVM tests, debug app and test APK builds, and Android Lint passed. Local evidence is in `target/desktop-t008/android-outbox-evidence/`. The complete mixed-mode run with an actual connectivity interruption is part of T024.
 
+### Android installation, network and backup checks (T023)
+
+- **Installation and tests** — The debug APK installed and opened on the Android 10 (API 29) and Android 17 (API 37) emulators. The APK declares minimum API 29 and target API 37. All nine JVM tests, the debug app and test APK builds, Android Lint, and the three self-contained outbox instrumentation checks passed. The two live restart phases were verified separately under T020.
+- **HTTPS and certificates** — Android 10 and 17 rejected an HTTP origin and an untrusted certificate. Android 17 also rejected a certificate signed by the trusted test CA with the wrong IP SAN. The fixture received no pairing request for the rejected cases. A certificate from the same test CA with the correct SAN allowed pairing and reading the desk state. The disposable CA was installed in the Android 17 emulator and accepted by the existing debug trust rule for `10.0.2.2`.
+- **Local network permission** — Android 10 offered pairing without a separate permission prompt. Android 17 kept pairing blocked and showed the explanation after the system dialog was denied. Granting the permission through the next prompt allowed the HTTPS pairing.
+- **Backup exclusions** — The framework backed up and restored a control file through Android's LocalTransport on both versions. The pairing preference and the Room database, WAL and SHM files were absent after reinstall and restore. On Android 17 the test passed in both cloud-backup mode and simulated device-transfer mode with `is_device_transfer=true`.
+
+The Android 17 image needed a restart of System UI after its first boot. The test runs above completed on that emulator. Local evidence is in `target/t023/`.
+
 ### Integrated Android heat with a network outage (T024, 2026-11-23)
 
 The verified Windows pilot opened a disposable competition in JAuswertung and started HTTPS from **Information → Zeitnahme**. An Android 10 emulator paired with the debug APK using a disposable pilot CA. Android instrumentation invoked the app's capture actions with the regular HTTPS client and Room outbox. The clock readiness limit stayed at 10 ms. The countdown was active before the attempt had a start timestamp, and the app blocked capture until it observed the running heat.
