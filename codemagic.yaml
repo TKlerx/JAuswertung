@@ -1,0 +1,46 @@
+workflows:
+  ios-zeitnahme-simulator:
+    name: JAuswertung Zeitnahme iPhone simulator
+    instance_type: mac_mini_m2
+    max_build_duration: 25
+    environment:
+      xcode: "26.4"
+    scripts:
+      - name: Test the timing protocol
+        script: |
+          set -euo pipefail
+          swift test --package-path ios-race-timing
+      - name: Build and test the iPhone app
+        script: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          cd ios-race-timing
+          mkdir -p build
+          xcodegen generate
+          device=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          for runtime, rows in json.load(sys.stdin)["devices"].items():
+              if runtime.rsplit(".", 1)[-1].startswith("iOS-26-4"):
+                  for row in rows:
+                      if row["name"] == "iPhone 17" and row["isAvailable"]:
+                          sys.exit(print(row["udid"]))
+          sys.exit("No iPhone 17 / iOS 26.4 simulator")
+          ')
+          collect() {
+            if [[ -d build/Timing.xcresult ]]; then
+              xcrun xcresulttool get test-results summary --path build/Timing.xcresult > build/TimingSummary.json || true
+              ditto -c -k --keepParent build/Timing.xcresult build/TimingResults.zip
+            fi
+            if [[ -d build/Build/Products/Debug-iphonesimulator/Zeitnahme.app ]]; then
+              ditto -c -k --keepParent build/Build/Products/Debug-iphonesimulator/Zeitnahme.app build/Zeitnahme-simulator.zip
+            fi
+          }
+          trap collect EXIT
+          xcodebuild test -project Zeitnahme.xcodeproj -scheme Zeitnahme \
+            -destination "platform=iOS Simulator,id=$device" -derivedDataPath build \
+            -resultBundlePath build/Timing.xcresult -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
+    artifacts:
+      - ios-race-timing/build/TimingSummary.json
+      - ios-race-timing/build/TimingResults.zip
+      - ios-race-timing/build/Zeitnahme-simulator.zip
