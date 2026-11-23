@@ -89,6 +89,8 @@ For the host-controlled restart check, build and install the matched debug app a
 
 ## Physical qualification
 
+The [T025 pilot worksheet](pilot/t025.md) registers the 30 desk starts and provides the scoring command. Complete the independent reference setup and certificate check before the first scored run.
+
 Qualify only the **Android client with the desk as starter** in T025. Use the applicable [Spec 001 SC-007 criteria](../001-phone-race-timing/spec.md#success-criteria), with app reopen in place of browser reload. Declare the readiness and audible-start limits up front, register at least 30 Android desk-start trials, and register a separate fault-recovery suite. Measure readiness from arming and count timeouts in the denominator. Check the 95% readiness target and the 10 ms clock-error limit for each timed lane in Ready trials, including reference uncertainty. Verify one configured race horn per successful start and measure audible onset and manual reaction separately. Use the proposed five-second window for comparison.
 
 Keep the readiness and fault results separate and reconcile every capture. Report the device, Android version, WLAN and audio setup. Include a local WLAN without internet uplink while mobile data remains enabled. Record the results as partial evidence for Spec 001. Its iOS and phone-start cases remain separate.
