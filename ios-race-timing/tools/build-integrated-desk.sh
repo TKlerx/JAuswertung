@@ -20,7 +20,7 @@ while read -r repo_name revision modules; do
     directory="$work/deps/$name"
     clone_at "https://github.com/$repo_name.git" "$revision" "$directory"
     if [[ -n "$modules" ]]; then
-        "${maven[@]}" -f "$directory/pom.xml" -pl "$modules" -am install
+        "${maven[@]}" -Dlombok.version=1.18.48 -f "$directory/pom.xml" -pl "$modules" -am install
     else
         "${maven[@]}" -f "$directory/pom.xml" install
     fi
