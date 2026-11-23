@@ -13,11 +13,14 @@ import de.df.jauswertung.zeitnahme.android.clock.ClockSync
 import de.df.jauswertung.zeitnahme.android.clock.monotonicMicros
 import de.df.jauswertung.zeitnahme.android.clock.processClockEpoch
 import de.df.jauswertung.zeitnahme.android.delivery.OutboxSender
+import de.df.jauswertung.zeitnahme.android.delivery.DeliveryLifecycle
+import de.df.jauswertung.zeitnahme.android.net.DeskEndpoint
 import de.df.jauswertung.zeitnahme.android.net.DeskFailure
 import de.df.jauswertung.zeitnahme.android.net.DeskHeat
 import de.df.jauswertung.zeitnahme.android.net.DeskHttp
 import de.df.jauswertung.zeitnahme.android.net.DeskOrigin
 import de.df.jauswertung.zeitnahme.android.net.DeskProblem
+import de.df.jauswertung.zeitnahme.android.net.DeskResponse
 import de.df.jauswertung.zeitnahme.android.net.DeskSession
 import de.df.jauswertung.zeitnahme.android.net.HeatState
 import de.df.jauswertung.zeitnahme.android.storage.DeliveryStatus
@@ -35,6 +38,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONException
+import org.json.JSONObject
 
 data class TimingScreenState(
     val networkAllowed: Boolean = false,
@@ -45,18 +49,32 @@ data class TimingScreenState(
     val problem: DeskProblem? = null,
     val syncValid: Boolean = false,
     val capturing: Set<Int> = emptySet(),
-    val delivery: Map<Int, DeliveryStatus> = emptyMap(),
+    val delivery: Map<Int, OutboxEvent> = emptyMap(),
+    val unresolved: List<OutboxEvent> = emptyList(),
     val captureStorageFailed: Boolean = false,
-)
+) {
+    fun canCapture(lane: Int, phoneTiming: Boolean): Boolean =
+        heat?.state == HeatState.LAEUFT && lane !in capturing && lane !in delivery &&
+            (!phoneTiming || syncValid)
+}
 
-class TimingViewModel(application: Application) : AndroidViewModel(application) {
-    private val http = DeskHttp(application)
+class TimingViewModel internal constructor(
+    application: Application,
+    private val http: DeskHttp,
+    private val post: suspend (DeskOrigin, DeskEndpoint, JSONObject, DeskPairing?, ((Long) -> Unit)?,
+        ((Long) -> Unit)?) -> DeskResponse = http::post,
+) : AndroidViewModel(application) {
+    constructor(application: Application) : this(application, DeskHttp(application))
+
     private val pairings = PairingStore(application)
     private val session = DeskSession(http, pairings)
     private val outbox = TimingDatabase.open(application).outbox()
     private val finish = FinishCapture(outbox::enqueue)
     private val stopwatch = StopwatchCapture(outbox::enqueue)
-    private val sender = OutboxSender(outbox, pairings, http)
+    private val sender = OutboxSender(outbox, pairings::current, pairings::expire) { origin, endpoint, pairing, json ->
+        post(origin, endpoint, json, pairing, null, null)
+    }
+    private val delivery = DeliveryLifecycle()
     private val mutable = MutableStateFlow(TimingScreenState())
     val state = mutable.asStateFlow()
     private var pairing: DeskPairing? = null
@@ -77,10 +95,15 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setNetworkAllowed(allowed: Boolean) {
+        val granted = allowed && !mutable.value.networkAllowed
         mutable.update { it.copy(networkAllowed = allowed) }
+        if (granted) delivery.request()
     }
 
+    fun retryPending() = delivery.request()
+
     suspend fun observeDesk(): Unit = coroutineScope {
+        launch { delivery.replay { mutable.value.networkAllowed && sendPending() } }
         if (mutable.value.loading) {
             try {
                 pairing = session.restore()
@@ -155,15 +178,9 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
                 if (event != null) {
                     if (outboxEvents.none { it.id == event.id }) outboxEvents = outboxEvents + event
                     updateLaneStatus()
-                    sender.sendPending()
+                    delivery.request()
                 }
             } catch (_: SQLException) {
-                mutable.update { it.copy(captureStorageFailed = true) }
-            } catch (_: IOException) {
-                mutable.update { it.copy(captureStorageFailed = true) }
-            } catch (_: GeneralSecurityException) {
-                mutable.update { it.copy(captureStorageFailed = true) }
-            } catch (_: JSONException) {
                 mutable.update { it.copy(captureStorageFailed = true) }
             } finally {
                 if (pairing?.generation == generation && mutable.value.heat?.attempt == attempt) {
@@ -171,6 +188,21 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
         }
+    }
+
+    private suspend fun sendPending(): Boolean {
+        try {
+            return sender.sendPending()
+        } catch (_: SQLException) {
+            mutable.update { it.copy(captureStorageFailed = true) }
+        } catch (_: IOException) {
+            mutable.update { it.copy(captureStorageFailed = true) }
+        } catch (_: GeneralSecurityException) {
+            mutable.update { it.copy(captureStorageFailed = true) }
+        } catch (_: JSONException) {
+            mutable.update { it.copy(captureStorageFailed = true) }
+        }
+        return false
     }
 
     private suspend fun sampleClock() {
@@ -184,13 +216,14 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
             val heat = current.heat
             val currentPath = http.networkPath()
             if (scope != selectedScope || path != currentPath) nextSample = 0
+            if (path != currentPath) delivery.request()
             selectedScope = scope
             path = currentPath
             if (scope != null && credentials != null && current.networkAllowed && heat?.syncRequired == true &&
                 heat.state in syncStates && monotonicMicros() >= nextSample
             ) {
                 val sample = ClockSync(::monotonicMicros) { endpoint, body, sent, received ->
-                    http.post(credentials.origin, endpoint, body, credentials, sent, received)
+                    post(credentials.origin, endpoint, body, credentials, sent, received)
                 }.sample(scope)
                 if (currentScope() == scope) {
                     if (sample != null) estimate = sample
@@ -214,8 +247,9 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
         val scope = currentScope()
         val outcomes = if (scope == null) emptyMap() else outboxEvents
             .filter { it.pairingGeneration == scope.pairing && it.attemptId == scope.attempt }
-            .associate { it.lane to it.status }
-        mutable.update { it.copy(delivery = outcomes) }
+            .associateBy(OutboxEvent::lane)
+        val unresolved = outboxEvents.filter { it.status != DeliveryStatus.ACCEPTED }
+        mutable.update { it.copy(delivery = outcomes, unresolved = unresolved) }
     }
 
     private fun updateSyncStatus() {
@@ -227,6 +261,7 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
     private suspend fun refresh() {
         try {
             val heat = session.refresh()
+            if (mutable.value.problem != null) delivery.request()
             mutable.update {
                 if (it.heat?.attempt == heat?.attempt) it.copy(heat = heat, problem = null)
                 else it.copy(heat = heat, problem = null, capturing = emptySet(), delivery = emptyMap(),
@@ -240,7 +275,8 @@ class TimingViewModel(application: Application) : AndroidViewModel(application) 
             }
             mutable.update {
                 if (failure.problem == DeskProblem.EXPIRED) {
-                    TimingScreenState(networkAllowed = it.networkAllowed, loading = false, problem = failure.problem)
+                    TimingScreenState(networkAllowed = it.networkAllowed, loading = false,
+                        problem = failure.problem, unresolved = it.unresolved)
                 } else it.copy(heat = session.lastHeat, problem = failure.problem)
             }
         }

@@ -30,6 +30,7 @@ import de.df.jauswertung.zeitnahme.android.capture.stopwatchMicros
 import de.df.jauswertung.zeitnahme.android.net.DeskHeat
 import de.df.jauswertung.zeitnahme.android.net.HeatState
 import de.df.jauswertung.zeitnahme.android.storage.DeliveryStatus
+import de.df.jauswertung.zeitnahme.android.storage.OutboxEvent
 import java.util.UUID
 
 @Composable
@@ -47,6 +48,9 @@ internal fun LaneScreen(
     }
     Text(heat.discipline, style = MaterialTheme.typography.headlineSmall)
     Text(stringResource(R.string.heat_id, heat.id.toString().take(8)))
+    if (!state.networkAllowed || state.problem != null) {
+        Text(stringResource(R.string.last_known_heat))
+    }
     Text(stringResource(heat.statusText()), style = MaterialTheme.typography.titleMedium)
     if (heat.state == HeatState.LAEUFT && heat.syncRequired && !state.syncValid) {
         Text(stringResource(R.string.capture_clock_unavailable), color = MaterialTheme.colorScheme.error)
@@ -56,8 +60,8 @@ internal fun LaneScreen(
     }
     if (heat.lanes.isEmpty()) Text(stringResource(R.string.no_lanes))
     for (lane in heat.lanes) {
-        val status = state.delivery[lane.number]
-        val canCapture = heat.state == HeatState.LAEUFT && status == null && lane.number !in state.capturing
+        val event = state.delivery[lane.number]
+        val canCapture = state.canCapture(lane.number, lane.phoneTiming)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.lane_number, lane.number), style = MaterialTheme.typography.titleLarge)
@@ -66,22 +70,54 @@ internal fun LaneScreen(
                 if (lane.phoneTiming) {
                     Button(
                         onClick = { onFinish(heat.attempt, lane.number) },
-                        enabled = canCapture && state.syncValid,
+                        enabled = canCapture,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                     ) {
                         Text(stringResource(R.string.capture_finish, lane.number))
                     }
-                } else if (status == null) {
+                } else if (event == null) {
                     key(heat.attempt, lane.number) {
                         StopwatchEntry(lane.number, canCapture) { onStopwatch(heat.attempt, lane.number, it) }
                     }
                 }
-                if (status != null) {
-                    Text(stringResource(status.text()), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                if (event != null) {
+                    DeliveryOutcome(event)
                 }
             }
         }
     }
+}
+
+@Composable
+internal fun PreviousDeliveries(state: TimingScreenState) {
+    val currentIds = state.delivery.values.mapTo(mutableSetOf(), OutboxEvent::id)
+    val previous = state.unresolved.filter { it.id !in currentIds }
+    if (previous.isEmpty()) return
+    Text(stringResource(R.string.previous_deliveries), style = MaterialTheme.typography.titleMedium)
+    for (event in previous) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.previous_delivery_lane, event.lane, event.attemptId.toString().take(8)))
+            DeliveryOutcome(event)
+        }
+    }
+}
+
+@Composable
+private fun DeliveryOutcome(event: OutboxEvent) {
+    val text = when (event.status) {
+        DeliveryStatus.PENDING -> R.string.finish_pending
+        DeliveryStatus.ACCEPTED -> R.string.finish_accepted
+        DeliveryStatus.BLOCKED -> if (event.reason == "pairing_unavailable") R.string.finish_blocked_old_pairing
+        else R.string.finish_blocked
+        DeliveryStatus.REJECTED -> when (event.reason) {
+            "geschlossen", "veraltet" -> R.string.finish_rejected_closed
+            "schaetzung" -> R.string.finish_rejected_estimate
+            "rolle" -> R.string.finish_rejected_lane
+            "ungueltig" -> R.string.finish_rejected_invalid
+            else -> R.string.finish_rejected
+        }
+    }
+    Text(stringResource(text), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
 }
 
 @Composable
@@ -135,11 +171,4 @@ private fun DeskHeat.statusText(): Int = when (state) {
     HeatState.LAEUFT -> R.string.heat_running
     HeatState.GESCHLOSSEN -> R.string.heat_closed
     HeatState.UEBERNOMMEN -> R.string.heat_applied
-}
-
-private fun DeliveryStatus.text(): Int = when (this) {
-    DeliveryStatus.PENDING -> R.string.finish_pending
-    DeliveryStatus.ACCEPTED -> R.string.finish_accepted
-    DeliveryStatus.REJECTED -> R.string.finish_rejected
-    DeliveryStatus.BLOCKED -> R.string.finish_blocked
 }

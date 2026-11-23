@@ -42,4 +42,13 @@
     <string name="finish_accepted">Am Wettkampftisch eingegangen</string>
     <string name="finish_rejected">Vom Wettkampftisch abgelehnt</string>
     <string name="finish_blocked">Senden gesperrt · Kopplung abgelaufen</string>
+    <string name="finish_blocked_old_pairing">Senden gesperrt · ursprüngliche Kopplung fehlt</string>
+    <string name="last_known_heat">Verbindung unterbrochen · zuletzt geladener Lauf</string>
+    <string name="retry_pending">Ausstehende Meldungen erneut senden</string>
+    <string name="previous_deliveries">Offene Meldungen aus früheren Läufen</string>
+    <string name="previous_delivery_lane">Bahn %1$d · Versuch %2$s</string>
+    <string name="finish_rejected_closed">Abgelehnt · dieser Lauf ist geschlossen</string>
+    <string name="finish_rejected_estimate">Abgelehnt · der Uhrabgleich ist am Tisch unbekannt</string>
+    <string name="finish_rejected_lane">Abgelehnt · die Bahn ist diesem Gerät nicht zugewiesen</string>
+    <string name="finish_rejected_invalid">Abgelehnt · die Zeitmeldung ist ungültig</string>
 </resources>

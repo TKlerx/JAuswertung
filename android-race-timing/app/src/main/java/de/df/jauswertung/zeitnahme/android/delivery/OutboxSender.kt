@@ -1,30 +1,32 @@
 package de.df.jauswertung.zeitnahme.android.delivery
 
 import de.df.jauswertung.zeitnahme.android.net.DeskEndpoint
-import de.df.jauswertung.zeitnahme.android.net.DeskHttp
+import de.df.jauswertung.zeitnahme.android.net.DeskOrigin
 import de.df.jauswertung.zeitnahme.android.net.DeskResponse
 import de.df.jauswertung.zeitnahme.android.storage.DeliveryStatus
+import de.df.jauswertung.zeitnahme.android.storage.DeskPairing
 import de.df.jauswertung.zeitnahme.android.storage.EventKind
 import de.df.jauswertung.zeitnahme.android.storage.OutboxEvent
-import de.df.jauswertung.zeitnahme.android.storage.PairingStore
 import de.df.jauswertung.zeitnahme.android.storage.TimingOutbox
 import java.io.IOException
+import java.util.UUID
 import javax.net.ssl.SSLException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONException
 import org.json.JSONObject
 
-class OutboxSender(
+internal class OutboxSender(
     private val store: TimingOutbox,
-    private val pairings: PairingStore,
-    private val http: DeskHttp,
+    private val currentPairing: suspend () -> DeskPairing?,
+    private val expirePairing: suspend (UUID) -> Unit,
+    private val post: suspend (DeskOrigin, DeskEndpoint, DeskPairing, JSONObject) -> DeskResponse,
 ) {
     private val mutex = Mutex()
 
-    suspend fun sendPending() = mutex.withLock {
+    suspend fun sendPending(): Boolean = mutex.withLock {
         for (event in store.pending()) {
-            val pairing = pairings.current()
+            val pairing = currentPairing()
             if (pairing == null || pairing.expired || pairing.generation != event.pairingGeneration ||
                 pairing.origin.value != event.deskOrigin
             ) {
@@ -36,23 +38,23 @@ class OutboxSender(
                 EventKind.STOPWATCH -> DeskEndpoint.STOPWATCH
             }
             val response = try {
-                http.post(pairing.origin, endpoint, event.payload(), pairing)
+                post(pairing.origin, endpoint, pairing, event.payload())
             } catch (_: SecurityException) {
                 store.recordSend(event.id, DeliveryStatus.PENDING, "desk_network_permission")
-                break
+                return@withLock true
             } catch (_: SSLException) {
                 store.recordSend(event.id, DeliveryStatus.PENDING, "desk_tls_failed")
-                break
+                return@withLock true
             } catch (_: IOException) {
                 store.recordSend(event.id, DeliveryStatus.PENDING, "desk_unreachable")
-                break
+                return@withLock true
             }
             when {
                 response.status == 401 -> {
-                    pairings.expire(event.pairingGeneration)
                     store.recordSend(event.id, DeliveryStatus.BLOCKED, "desk_session_expired")
                     store.blockPairing(event.pairingGeneration, "desk_session_expired")
-                    break
+                    expirePairing(event.pairingGeneration)
+                    return@withLock store.pending().isNotEmpty()
                 }
                 response.acknowledged() ->
                     store.recordSend(event.id, DeliveryStatus.ACCEPTED, null)
@@ -61,10 +63,11 @@ class OutboxSender(
                         ?.takeIf(String::isNotBlank) ?: "request_rejected")
                 else -> {
                     store.recordSend(event.id, DeliveryStatus.PENDING, "desk_response_unconfirmed")
-                    break
+                    return@withLock true
                 }
             }
         }
+        false
     }
 }
 
