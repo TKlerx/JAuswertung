@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<plugin name="Zeitnahme"
+        id="de.df.jauswertung.zeitnahme"
+        classname="de.df.jauswertung.gui.plugins.zeitnahme.MZeitnahmePlugin">
+    <dependency id="de.df.jauswertung.core"/>
+</plugin>

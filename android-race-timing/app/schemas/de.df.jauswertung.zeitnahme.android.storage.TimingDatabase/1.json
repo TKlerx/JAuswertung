@@ -1,0 +1,107 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "4be7c00b14481b7a856d6c01024a2a83",
+    "entities": [
+      {
+        "tableName": "outbox",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `pairingGeneration` BLOB NOT NULL, `deskOrigin` TEXT NOT NULL, `attemptId` BLOB NOT NULL, `lane` INTEGER NOT NULL, `kind` TEXT NOT NULL, `timeMicros` INTEGER NOT NULL, `clockEpoch` BLOB, `estimateId` BLOB, `status` TEXT NOT NULL, `sendAttempts` INTEGER NOT NULL, `reason` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pairingGeneration",
+            "columnName": "pairingGeneration",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deskOrigin",
+            "columnName": "deskOrigin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attemptId",
+            "columnName": "attemptId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lane",
+            "columnName": "lane",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeMicros",
+            "columnName": "timeMicros",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clockEpoch",
+            "columnName": "clockEpoch",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "estimateId",
+            "columnName": "estimateId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sendAttempts",
+            "columnName": "sendAttempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_outbox_pairingGeneration_attemptId_lane",
+            "unique": true,
+            "columnNames": [
+              "pairingGeneration",
+              "attemptId",
+              "lane"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_outbox_pairingGeneration_attemptId_lane` ON `${TABLE_NAME}` (`pairingGeneration`, `attemptId`, `lane`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4be7c00b14481b7a856d6c01024a2a83')"
+    ]
+  }
+}
