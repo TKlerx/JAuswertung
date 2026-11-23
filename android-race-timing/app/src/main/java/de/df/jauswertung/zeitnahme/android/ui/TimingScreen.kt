@@ -45,6 +45,7 @@ fun TimingScreen(
     onPair: (String, String, String) -> Unit,
     requestNetwork: () -> Unit,
     onFinish: (UUID, Int) -> Unit,
+    onStopwatch: (UUID, Int, Long) -> Unit,
 ) {
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
@@ -72,7 +73,7 @@ fun TimingScreen(
                     when {
                         state.loading -> CircularProgressIndicator()
                         state.pairedName == null -> PairForm(state.networkAllowed && !state.pairing, onPair)
-                        else -> LaneScreen(state.pairedName, state, onFinish)
+                        else -> LaneScreen(state.pairedName, state, onFinish, onStopwatch)
                     }
                 }
             }

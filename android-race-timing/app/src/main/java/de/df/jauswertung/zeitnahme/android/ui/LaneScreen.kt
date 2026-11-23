@@ -5,25 +5,40 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.df.jauswertung.zeitnahme.android.R
+import de.df.jauswertung.zeitnahme.android.capture.stopwatchMicros
 import de.df.jauswertung.zeitnahme.android.net.DeskHeat
 import de.df.jauswertung.zeitnahme.android.net.HeatState
 import de.df.jauswertung.zeitnahme.android.storage.DeliveryStatus
 import java.util.UUID
 
 @Composable
-internal fun LaneScreen(name: String, state: TimingScreenState, onFinish: (UUID, Int) -> Unit) {
+internal fun LaneScreen(
+    name: String,
+    state: TimingScreenState,
+    onFinish: (UUID, Int) -> Unit,
+    onStopwatch: (UUID, Int, Long) -> Unit,
+) {
     Text(stringResource(R.string.paired_as, name), style = MaterialTheme.typography.titleMedium)
     val heat = state.heat
     if (heat == null) {
@@ -42,6 +57,7 @@ internal fun LaneScreen(name: String, state: TimingScreenState, onFinish: (UUID,
     if (heat.lanes.isEmpty()) Text(stringResource(R.string.no_lanes))
     for (lane in heat.lanes) {
         val status = state.delivery[lane.number]
+        val canCapture = heat.state == HeatState.LAEUFT && status == null && lane.number !in state.capturing
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.lane_number, lane.number), style = MaterialTheme.typography.titleLarge)
@@ -50,18 +66,63 @@ internal fun LaneScreen(name: String, state: TimingScreenState, onFinish: (UUID,
                 if (lane.phoneTiming) {
                     Button(
                         onClick = { onFinish(heat.attempt, lane.number) },
-                        enabled = heat.state == HeatState.LAEUFT && state.syncValid &&
-                            status == null && lane.number !in state.capturing,
+                        enabled = canCapture && state.syncValid,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                     ) {
                         Text(stringResource(R.string.capture_finish, lane.number))
                     }
-                    if (status != null) {
-                        Text(stringResource(status.text()), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                } else if (status == null) {
+                    key(heat.attempt, lane.number) {
+                        StopwatchEntry(lane.number, canCapture) { onStopwatch(heat.attempt, lane.number, it) }
                     }
+                }
+                if (status != null) {
+                    Text(stringResource(status.text()), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StopwatchEntry(lane: Int, enabled: Boolean, onSave: (Long) -> Unit) {
+    var input by rememberSaveable { mutableStateOf("") }
+    var invalid by rememberSaveable { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
+    OutlinedTextField(
+        value = input,
+        onValueChange = {
+            input = it
+            invalid = false
+        },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        label = { Text(stringResource(R.string.stopwatch_input, lane)) },
+        supportingText = {
+            if (invalid) {
+                Text(stringResource(R.string.stopwatch_input_error),
+                    Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            } else {
+                Text(stringResource(R.string.stopwatch_input_format))
+            }
+        },
+        isError = invalid,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+    )
+    Button(
+        onClick = {
+            val duration = stopwatchMicros(input)
+            invalid = duration == null
+            if (duration != null) {
+                focus.clearFocus()
+                onSave(duration)
+            }
+        },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+    ) {
+        Text(stringResource(R.string.stopwatch_save, lane))
     }
 }
 

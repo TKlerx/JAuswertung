@@ -42,6 +42,12 @@ The verified Windows pilot armed a synthetic heat and reached Ready after Androi
 
 The seven JVM tests, the debug APK build and Android Lint passed. The clock contract tests covered five-second probe expiry, estimate scope mismatches and the inclusive 10,000 µs bound. Local emulator evidence is in `target/desktop-t008/android-finish-results.csv`.
 
+### Android manual stopwatch check (T017–T019, 2026-11-23)
+
+The verified Windows pilot assigned stopwatch lanes 3 and 4 to one Android 17 emulator. Both controls were disabled before the desk countdown. In the running heat, the app rejected `0` inline and the desk still had no results. Entering `1:05,20` in the lane 4 field produced one acknowledged result on lane 4 with exactly 65,200,000 µs and source `STOPPUHR_HANDY`. Lane 3 stayed available and had no result. This attempt used no clock estimate for the Android device.
+
+All nine JVM tests, the debug APK build and Android Lint passed. Local desk evidence is in `target/desktop-t008/android-stopwatch-results.csv`.
+
 ## Complete heat and delivery recovery
 
 1. Assign two timestamp lanes and one stopwatch lane to the same Android device. Pair with a single-use code and verify only those lanes appear with the correct modes. On target API 37, also deny and then grant local network access. Confirm that the UI explains the denial and recovers when granted.
