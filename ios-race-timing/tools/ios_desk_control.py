@@ -105,7 +105,7 @@ def run():
                         return {"code": code, "address": "https://127.0.0.1:18444"}
                     if self.path == "/start":
                         command("start")
-                        wait_for_file(Path(str(report)+".countdown"), desktop)
+                        wait_for_file(Path(str(report)+".countdown"), desktop, 36)
                         return {}
                     if self.path == "/offline":
                         link.online = False

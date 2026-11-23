@@ -233,25 +233,28 @@ public final class IntegratedMixedPilot {
                         }
                         if (!started.get()) throw new AssertionError("Desk not ready to start");
                         var countdown = JZeitnahmeLauf.class.getDeclaredField("laufenderCountdown");
+                        var audioError = JZeitnahmeLauf.class.getDeclaredField("tonFehler");
                         countdown.setAccessible(true);
-                        for (int i = 0; i < 60; i++) {
-                            var active = new AtomicReference<>(false);
+                        audioError.setAccessible(true);
+                        var active = new java.util.concurrent.atomic.AtomicBoolean();
+                        for (int i = 0; i < 400 && !active.get(); i++) {
                             SwingUtilities.invokeAndWait(() -> {
                                 try {
+                                    if (audioError.getBoolean(timing.get())) {
+                                        throw new AssertionError("The test desk could not prepare or play the start tones");
+                                    }
                                     active.set(countdown.get(timing.get()) != null);
-                                } catch (IllegalAccessException ex) {
+                                    if (attempt(timing.get()).start().isPresent()) {
+                                        throw new AssertionError("The start was recorded before a countdown was observed");
+                                    }
+                                } catch (ReflectiveOperationException ex) {
                                     throw new IllegalStateException(ex);
                                 }
                             });
-                            if (active.get()) {
-                                if (attempt(timing.get()).start().isPresent()) {
-                                    throw new AssertionError("Clock started during the short tones");
-                                }
-                                Files.writeString(Path.of(args[6] + ".countdown"), "active");
-                                break;
-                            }
-                            Thread.sleep(50);
+                            if (!active.get()) Thread.sleep(50);
                         }
+                        if (!active.get()) throw new AssertionError("Countdown never started");
+                        Files.writeString(Path.of(args[6] + ".countdown"), "active");
                     } else if (command.equals("apply")) {
                         var run = attempt(timing.get());
                         var entries = run.ergebnisse();
