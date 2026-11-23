@@ -48,6 +48,14 @@ The verified Windows pilot assigned stopwatch lanes 3 and 4 to one Android 17 em
 
 All nine JVM tests, the debug APK build and Android Lint passed. Local desk evidence is in `target/desktop-t008/android-stopwatch-results.csv`.
 
+### Android outbox recovery check (T020–T022, 2026-11-23)
+
+The Android 17 emulator sent a timed finish for lane 3 to the verified Windows pilot over trusted HTTPS. The desk returned HTTP 200 before the Android test transport dropped the acknowledgement. The host copied the first request and acceptance evidence while the app still showed the event as pending, then stopped the app process without clearing its data.
+
+In the second process, the app restored the pending event and resent the identical payload, including the original event ID, process epoch and estimate. Lane 4 stayed disabled until a new qualifying clock estimate arrived. The pilot applied exactly one result per lane. After Apply, the original lane 3 submission still received HTTP 200 and a new submission for the closed attempt received HTTP 409 (`geschlossen`).
+
+The three local Android instrumentation checks passed for transaction rollback, durable replay and 401 blocking. Both live restart phases, all nine JVM tests, debug app and test APK builds, and Android Lint passed. Local evidence is in `target/desktop-t008/android-outbox-evidence/`. The complete mixed-mode run with an actual connectivity interruption is part of T024.
+
 ## Complete heat and delivery recovery
 
 1. Assign two timestamp lanes and one stopwatch lane to the same Android device. Pair with a single-use code and verify only those lanes appear with the correct modes. On target API 37, also deny and then grant local network access. Confirm that the UI explains the denial and recovers when granted.
@@ -57,6 +65,8 @@ All nine JVM tests, the debug APK build and Android Lint passed. Local desk evid
 5. In a fresh attempt with two assigned timestamp lanes, run the T020 host-controlled restart check using `android-race-timing/tools/outbox-restart.ps1`. In the first instrumentation invocation, send a finish over HTTPS and record the desk's HTTP 200 with `angenommen: true` before the test transport seam withholds the acknowledgement. Export that evidence, the original event ID and payload to the test host before ending the invocation. Exclude pairing credentials. With the desk session and app data intact, stop the app process from the host and start a second invocation with replay held. Verify the restored Pending record, then allow replay and compare the original and retry ID and payload, including the old epoch and estimate. Verify Accepted and exactly one result for that lane at the desk. Hold fresh clock samples until the new process has observed the running heat. Confirm that the second lane stays disabled before a qualifying estimate arrives, then verify that the lane can capture using the new process epoch and estimate.
 6. In a separate protocol check, confirm that an exact retry after Apply succeeds and a first-time submission for a closed attempt is rejected with a visible reason. Verify that an expired pairing blocks its queue and subsequent pairing leaves the old event in its original session.
 7. Run negative pairing tests for HTTP, an untrusted chain and a wrong hostname.
+
+For the host-controlled restart check, build and install the matched debug app and `:app:assembleDebugAndroidTest` APK on a disposable emulator with a trusted pilot CA. Run `tools/outbox-restart.ps1` with its ADB path, emulator serial, desk HTTPS origin, fresh pairing code and output directory. Pass `-StartHeat` and `-ApplyHeat` script blocks that start the armed desk heat and apply its two results. Each block must return after its desk action completes. Keep the same desktop session open through both instrumentation phases.
 
 ## Physical qualification
 

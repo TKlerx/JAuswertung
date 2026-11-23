@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.df.jauswertung.zeitnahme.android.R
 import de.df.jauswertung.zeitnahme.android.net.DeskProblem
+import de.df.jauswertung.zeitnahme.android.storage.DeliveryStatus
 import java.util.UUID
 
 @Composable
@@ -46,6 +47,7 @@ fun TimingScreen(
     requestNetwork: () -> Unit,
     onFinish: (UUID, Int) -> Unit,
     onStopwatch: (UUID, Int, Long) -> Unit,
+    onRetry: () -> Unit,
 ) {
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
@@ -68,13 +70,21 @@ fun TimingScreen(
                         Button(onClick = requestNetwork) { Text(stringResource(R.string.allow_local_network)) }
                     }
                     state.problem?.let { problem ->
-                        Text(stringResource(problem.text()), color = MaterialTheme.colorScheme.error)
+                        if (problem != DeskProblem.UNREACHABLE || state.heat == null) {
+                            Text(stringResource(problem.text()), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    if (state.unresolved.any { it.status == DeliveryStatus.PENDING }) {
+                        Button(onClick = onRetry, enabled = state.networkAllowed) {
+                            Text(stringResource(R.string.retry_pending))
+                        }
                     }
                     when {
                         state.loading -> CircularProgressIndicator()
                         state.pairedName == null -> PairForm(state.networkAllowed && !state.pairing, onPair)
                         else -> LaneScreen(state.pairedName, state, onFinish, onStopwatch)
                     }
+                    PreviousDeliveries(state)
                 }
             }
         }
