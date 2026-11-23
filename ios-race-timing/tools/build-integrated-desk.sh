@@ -19,9 +19,11 @@ while read -r repo_name revision modules; do
     name=${repo_name##*/}
     directory="$work/deps/$name"
     clone_at "https://github.com/$repo_name.git" "$revision" "$directory"
-    args=()
-    if [[ -n "$modules" ]]; then args=(-pl "$modules" -am); fi
-    "${maven[@]}" -f "$directory/pom.xml" "${args[@]}" install
+    if [[ -n "$modules" ]]; then
+        "${maven[@]}" -f "$directory/pom.xml" -pl "$modules" -am install
+    else
+        "${maven[@]}" -f "$directory/pom.xml" install
+    fi
 done <<'DEPS'
 dennisfabri/uistate 644253f763a0aff9e824cce7a4a36e27cfcc6759
 dennisfabri/swingfx a320fa094580812bc5af23f27b530362fc657700
