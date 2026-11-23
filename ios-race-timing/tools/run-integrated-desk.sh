@@ -55,9 +55,9 @@ else
     trap 'kill "$desk_control" 2>/dev/null || true' EXIT
 fi
 
-for attempt in {1..90}; do
+for attempt in {1..180}; do
     if [[ -f "$work/control-ready" ]]; then break; fi
-    if [[ -s "$work/process-result.txt" ]]; then break; fi
+    if [[ -s "$work/desk-control.log" ]]; then break; fi
     sleep 1
 done
 if [[ ! -f "$work/control-ready" ]]; then

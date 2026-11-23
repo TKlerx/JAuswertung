@@ -88,4 +88,5 @@ workflows:
       - ios-race-timing/build/integration/desk-offline.csv
       - ios-race-timing/build/integration/desk-results.csv
       - ios-race-timing/build/integration/process-result.txt
+      - ios-race-timing/build/integration/desk-control.log
       - ios-race-timing/build/integration/desktop.log

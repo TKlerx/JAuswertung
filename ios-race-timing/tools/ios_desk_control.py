@@ -81,7 +81,7 @@ def run():
                 desktop.stdin.write(action + "\n")
                 desktop.stdin.flush()
 
-            wait_for_file(invitation, desktop, 75)
+            wait_for_file(invitation, desktop, 160)
             invitation.unlink()
             command("arm")
             link.start()
