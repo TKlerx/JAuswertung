@@ -6,11 +6,13 @@ workflows:
     environment:
       xcode: "26.4"
     scripts:
-      - name: Test the timing protocol
+      - &protocol_tests
+        name: Test the timing protocol
         script: |
           set -euo pipefail
           swift test --package-path ios-race-timing
-      - name: Build and test the iPhone app
+      - &simulator_tests
+        name: Build and test the iPhone app
         script: |
           set -euo pipefail
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
@@ -26,6 +28,7 @@ workflows:
                           sys.exit(print(row["udid"]))
           sys.exit("No iPhone 17 / iOS 26.4 simulator")
           ')
+          printf '%s\n' "$device" > build/device.id
           collect() {
             if [[ -d build/Timing.xcresult ]]; then
               xcrun xcresulttool get test-results summary --path build/Timing.xcresult > build/TimingSummary.json || true
@@ -39,8 +42,50 @@ workflows:
           xcodebuild test -project Zeitnahme.xcodeproj -scheme Zeitnahme \
             -destination "platform=iOS Simulator,id=$device" -derivedDataPath build \
             -resultBundlePath build/Timing.xcresult -parallel-testing-enabled NO \
+            -only-testing:ZeitnahmeUITests/PairingTests \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
     artifacts:
       - ios-race-timing/build/TimingSummary.json
       - ios-race-timing/build/TimingResults.zip
       - ios-race-timing/build/Zeitnahme-simulator.zip
+
+  ios-zeitnahme-integration:
+    name: iPhone and integrated JAuswertung timing pilot
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      xcode: "26.4"
+    cache:
+      cache_paths:
+        - ios-race-timing/build/integration/maven
+    scripts:
+      - *protocol_tests
+      - *simulator_tests
+      - name: Build the integrated JAuswertung pilot
+        script: |
+          set -euo pipefail
+          if ! /usr/libexec/java_home -v 25 >/dev/null 2>&1; then brew install --cask temurin@25; fi
+          if ! command -v mvn >/dev/null; then brew install maven; fi
+          export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash ios-race-timing/tools/build-integrated-desk.sh
+      - name: Verify the countdown, link interruption and direct result transfer
+        script: |
+          set -euo pipefail
+          collect() {
+            if [[ -d ios-race-timing/build/IntegratedTiming.xcresult ]]; then
+              ditto -c -k --keepParent ios-race-timing/build/IntegratedTiming.xcresult ios-race-timing/build/IntegratedTiming.zip
+            fi
+          }
+          trap collect EXIT
+          export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash ios-race-timing/tools/run-integrated-desk.sh "$(cat ios-race-timing/build/device.id)"
+    artifacts:
+      - ios-race-timing/build/TimingSummary.json
+      - ios-race-timing/build/Zeitnahme-simulator.zip
+      - ios-race-timing/build/IntegratedTiming.zip
+      - ios-race-timing/build/integration/desk-offline.csv
+      - ios-race-timing/build/integration/desk-results.csv
+      - ios-race-timing/build/integration/process-result.txt
+      - ios-race-timing/build/integration/desktop.log

@@ -35,6 +35,7 @@ targets:
       - target: Zeitnahme
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: de.df.jauswertung.zeitnahme.ios.uitests
 schemes:
   Zeitnahme:
