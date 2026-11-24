@@ -421,7 +421,12 @@
             </dependency>
             <dependency>
                 <groupId>org.lisasp.swing</groupId>
-                <artifactId>filechooser-platform</artifactId>
+                <artifactId>filechooser-jfx</artifactId>
+                <version>${filechooser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.lisasp.swing</groupId>
+                <artifactId>filechooser-l2f</artifactId>
                 <version>${filechooser.version}</version>
             </dependency>
             <dependency>

@@ -8,7 +8,10 @@ import de.df.jauswertung.gui.util.I18n;
 import de.df.jutils.gui.util.UIStateUtils;
 import de.df.jutils.print.PrintManager;
 import org.jdesktop.swinghelper.debug.CheckThreadViolationRepaintManager;
-import org.lisasp.swing.filechooser.platform.PlatformFileChooser;
+import org.lisasp.swing.filechooser.FileChooserUtils;
+import org.lisasp.swing.filechooser.jfx.FileChooserJFX;
+import org.lisasp.swing.filechooser.l2f.FileChooserL2f;
+import de.df.jutils.util.OSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import skt.swing.scroll.ScrollGestureRecognizer;
@@ -49,7 +52,7 @@ public final class DefaultInit {
         SystemStreamsToLog.install();
 
         UIStateUtils.initUIState();
-        PlatformFileChooser.initialize();
+        FileChooserUtils.initialize(OSUtils.isWindows() ? new FileChooserJFX() : new FileChooserL2f());
 
         SwingUtilities.invokeLater(() -> {
             try {
